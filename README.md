@@ -1,72 +1,78 @@
 # ⏳ Next Appointment
 
-## Concepto
-Aplicación web genérica de countdown donde el usuario crea sus propios eventos con nombre, fecha, hora e icono emoji. Una pantalla para cualquier cosa que estés esperando.
+Aplicación web de countdown 100% client-side. Crea tus propios eventos con nombre, fecha, hora, emoji y color, y mira la cuenta atrás en tiempo real. Sin registro, sin anuncios, funciona offline (PWA).
 
-## Problema que resuelve
-Los contadores de cuenta regresiva existentes son feos, lentos o requieren registro. Next Anything es instantáneo, bonito y funciona offline. Bodas, viajes, cumpleaños, estrenos, exámenes — cualquier cosa.
+## 🚀 Demo local
 
-## Funcionalidades core
-- Crear eventos con: nombre, fecha, hora, emoji/icono y color de acento
-- Card con countdown en días, horas, minutos y segundos
-- Swipe entre eventos
-- Al llegar a cero: mensaje de celebración animado
-- Todo guardado en localStorage, sin login
+No requiere build ni dependencias. Solo necesitas servir los archivos estáticos (el Service Worker no funciona con `file://`, necesita `http://`).
 
-## Funcionalidades secundarias
-- Eventos recurrentes (cumpleaños anuales, aniversarios)
-- Compartir evento como imagen o link
-- Fondo personalizable (color, gradiente, foto)
-- Modo "tiempo transcurrido" (cuánto hace que pasó algo)
-- Notificaciones programadas (PWA)
-- Tema claro/oscuro
+```bash
+# Con Python
+python3 -m http.server 8080
 
-## Casos de uso
-- 🎂 Cumpleaños y aniversarios
-- ✈️ Próximo viaje o vacaciones
-- 🎓 Fecha de examen o entrega
-- 🎬 Estreno de película o serie
-- 💒 Boda
-- 🏠 Mudanza
-- 🍾 Fin de año
-- 💼 Primer día de trabajo
-- 🎮 Lanzamiento de videojuego
-
-## Arquitectura
-```
-100% cliente — sin backend, sin APIs externas
-localStorage → persistencia de eventos
-Service Worker → notificaciones y uso offline
+# Con Node (npx)
+npx serve .
 ```
 
-## Stack tecnológico
-- HTML5 / CSS3 / JavaScript vanilla
-- localStorage para todos los datos
-- PWA (manifest + service worker) para instalación y notificaciones
-- Canvas o html2canvas para exportar evento como imagen
+Luego abre `http://localhost:8080`.
 
-## Retos técnicos
-- Notificaciones push en iOS son limitadas (solo desde iOS 16.4 en PWA)
-- Generar imagen compartible atractiva del countdown
-- Sincronización entre dispositivos sin backend (opcional: usar URL con parámetros)
+## 📂 Estructura
 
-## Pantallas / vistas
-1. **Main** — próximo evento con countdown
-2. **Lista** — todos los eventos ordenados por fecha
-3. **Crear/editar** — formulario simple con preview en tiempo real
-4. **Celebración** — pantalla animada cuando llega el día
+```
+next-appointment/
+├── index.html          # Las 4 vistas: main, lista, formulario, celebración
+├── manifest.json        # Configuración PWA
+├── service-worker.js    # Cache offline
+├── css/
+│   └── styles.css
+├── js/
+│   ├── storage.js       # Persistencia en localStorage
+│   ├── countdown.js     # Cálculo de cuentas atrás
+│   ├── ui.js             # Renderizado de cards, listas, grids
+│   └── app.js            # Lógica principal / eventos
+└── icons/
+    ├── icon-192.png
+    └── icon-512.png
+```
 
-## Diferenciadores respecto a competidores
-- Sin registro
-- Sin anuncios
-- Funciona offline
-- Diseño minimalista y elegante
-- Compartible sin que el receptor necesite la app
+## ✅ Funcionalidades implementadas (MVP)
 
-## Monetización potencial
-- Versión gratuita con hasta 5 eventos
-- Plan premium con eventos ilimitados, fondos personalizados y notificaciones avanzadas
-- Versión de pago única (sin suscripción) — modelo más honesto para este tipo de utilidad
+- Crear, editar y eliminar eventos (nombre, fecha, hora, emoji, color)
+- Countdown en vivo (días, horas, minutos, segundos)
+- Carrusel de eventos con swipe + indicadores (dots)
+- Vista de lista ordenada por fecha
+- Vista previa en tiempo real al crear/editar
+- Eventos recurrentes (anuales)
+- Pantalla de celebración con confetti al llegar a cero
+- Tema claro/oscuro (con detección automática del sistema)
+- Compartir evento (Web Share API / clipboard)
+- Todo en localStorage, sin backend
+- PWA instalable con soporte offline básico
+
+## 🔜 Pendiente / ideas futuras
+
+- Exportar evento como imagen (canvas / html2canvas)
+- Fondos personalizables (color, gradiente, foto)
+- Modo "tiempo transcurrido" (eventos en el pasado)
+- Notificaciones push programadas (PWA, limitado en iOS)
+- Sincronización entre dispositivos vía URL con parámetros
+
+## 🛠️ Stack
+
+HTML5, CSS3 y JavaScript vanilla. Sin frameworks ni dependencias externas.
+
+## 📦 Despliegue
+
+Compatible con GitHub Pages, Netlify, Vercel o cualquier hosting estático:
+
+```bash
+# GitHub Pages (rama main, carpeta raíz)
+git add .
+git commit -m "Initial commit"
+git push origin main
+# Activar GitHub Pages en Settings > Pages > Source: main / root
+```
 
 ---
+
 *Proyecto derivado de Next Match — misma filosofía: una pantalla, una función, sin ruido.*

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6c5ce7" />
+  <title>Next Appointment ⏳</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===================== MAIN VIEW ===================== -->
+    <section id="view-main" class="view view-active">
+      <header class="topbar">
+        <button id="btn-theme" class="icon-btn" aria-label="Cambiar tema">🌙</button>
+        <h1 class="logo">⏳ Next Appointment</h1>
+        <button id="btn-list" class="icon-btn" aria-label="Ver lista">📋</button>
+      </header>
+
+      <div id="event-carousel" class="carousel">
+        <!-- Event cards are injected here by JS -->
+      </div>
+
+      <div id="empty-state" class="empty-state hidden">
+        <p class="empty-emoji">⏳</p>
+        <p>Todavía no tienes eventos.</p>
+        <button id="btn-empty-create" class="btn-primary">Crear mi primer evento</button>
+      </div>
+
+      <div class="dots" id="carousel-dots"></div>
+
+      <button id="btn-create" class="fab" aria-label="Crear evento">＋</button>
+    </section>
+
+    <!-- ===================== LIST VIEW ===================== -->
+    <section id="view-list" class="view">
+      <header class="topbar">
+        <button class="icon-btn back-btn" data-target="view-main" aria-label="Volver">←</button>
+        <h1 class="logo">Mis eventos</h1>
+        <span class="icon-btn placeholder"></span>
+      </header>
+
+      <ul id="event-list" class="event-list"></ul>
+
+      <div id="list-empty-state" class="empty-state hidden">
+        <p class="empty-emoji">📭</p>
+        <p>No hay eventos creados todavía.</p>
+      </div>
+
+      <button id="btn-create-from-list" class="fab" aria-label="Crear evento">＋</button>
+    </section>
+
+    <!-- ===================== CREATE/EDIT VIEW ===================== -->
+    <section id="view-form" class="view">
+      <header class="topbar">
+        <button class="icon-btn back-btn" data-target="view-main" aria-label="Cancelar">←</button>
+        <h1 class="logo" id="form-title">Nuevo evento</h1>
+        <button id="btn-delete-event" class="icon-btn hidden" aria-label="Eliminar">🗑️</button>
+      </header>
+
+      <form id="event-form" class="event-form">
+        <input type="hidden" id="event-id" />
+
+        <div class="form-group">
+          <label for="event-name">Nombre del evento</label>
+          <input type="text" id="event-name" placeholder="Ej: Viaje a Japón" required maxlength="40" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="event-date">Fecha</label>
+            <input type="date" id="event-date" required />
+          </div>
+          <div class="form-group">
+            <label for="event-time">Hora</label>
+            <input type="time" id="event-time" value="00:00" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Icono</label>
+          <div class="emoji-grid" id="emoji-grid"></div>
+          <input type="hidden" id="event-emoji" value="⏳" />
+        </div>
+
+        <div class="form-group">
+          <label>Color de acento</label>
+          <div class="color-grid" id="color-grid"></div>
+          <input type="hidden" id="event-color" value="#6c5ce7" />
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="event-recurring" />
+            Repetir cada año (cumpleaños, aniversarios...)
+          </label>
+        </div>
+
+        <!-- Live preview -->
+        <div class="form-group">
+          <label>Vista previa</label>
+          <div id="preview-card" class="event-card preview-card">
+            <div class="card-emoji" id="preview-emoji">⏳</div>
+            <div class="card-name" id="preview-name">Nombre del evento</div>
+            <div class="card-countdown" id="preview-countdown">--d --h --m --s</div>
+            <div class="card-date" id="preview-date">Selecciona una fecha</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary btn-block">Guardar evento</button>
+      </form>
+    </section>
+
+    <!-- ===================== CELEBRATION VIEW ===================== -->
+    <section id="view-celebration" class="view">
+      <div class="celebration-content">
+        <div id="celebration-emoji" class="celebration-emoji">🎉</div>
+        <h1 id="celebration-title">¡Ya llegó el día!</h1>
+        <p id="celebration-name" class="celebration-name"></p>
+        <div class="confetti" id="confetti"></div>
+        <button class="icon-btn back-btn" data-target="view-main">Volver al inicio</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/countdown.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
