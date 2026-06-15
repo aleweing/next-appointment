@@ -4,6 +4,7 @@
 
 const STORAGE_KEY = 'next-appointment:events';
 const THEME_KEY = 'next-appointment:theme';
+const SORT_KEY = 'next-appointment:sort';
 
 const Storage = {
   /**
@@ -75,6 +76,17 @@ const Storage = {
   setTheme(theme) {
     localStorage.setItem(THEME_KEY, theme);
   },
+
+  /**
+   * Modo de ordenación de la lista.
+   */
+  getSortMode() {
+    return localStorage.getItem(SORT_KEY) || 'date-asc';
+  },
+
+  setSortMode(mode) {
+    localStorage.setItem(SORT_KEY, mode);
+  },
 };
 
 /**
@@ -82,4 +94,48 @@ const Storage = {
  */
 function generateId() {
   return 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+/**
+ * Codifica un evento como string seguro para usar en una URL (base64 + URI safe).
+ * Solo se exportan los campos relevantes (no el id local ni flags internos).
+ * @param {Object} event
+ * @returns {string}
+ */
+function encodeEventForShare(event) {
+  const payload = {
+    name: event.name,
+    date: event.date,
+    time: event.time,
+    emoji: event.emoji,
+    color: event.color,
+    recurring: !!event.recurring,
+  };
+  const json = JSON.stringify(payload);
+  const base64 = btoa(unescape(encodeURIComponent(json)));
+  return base64;
+}
+
+/**
+ * Decodifica un string generado por encodeEventForShare.
+ * Devuelve null si el formato no es válido.
+ * @param {string} encoded
+ * @returns {Object|null}
+ */
+function decodeSharedEvent(encoded) {
+  try {
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const data = JSON.parse(json);
+    if (!data.name || !data.date) return null;
+    return {
+      name: String(data.name).slice(0, 40),
+      date: data.date,
+      time: data.time || '00:00',
+      emoji: data.emoji || '⏳',
+      color: data.color || '#6c5ce7',
+      recurring: !!data.recurring,
+    };
+  } catch (e) {
+    return null;
+  }
 }

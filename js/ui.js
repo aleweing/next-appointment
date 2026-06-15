@@ -14,15 +14,23 @@ const COLOR_OPTIONS = [
 
 const UI = {
   /**
-   * Cambia la vista activa.
+   * Cambia la vista activa, con una transición de slide.
    * @param {string} viewId
+   * @param {'left'|'right'|null} direction - dirección de la animación de entrada
    */
-  showView(viewId) {
+  showView(viewId, direction = 'right') {
     document.querySelectorAll('.view').forEach((el) => {
-      el.classList.remove('view-active');
+      el.classList.remove('view-active', 'view-slide-in-right', 'view-slide-in-left');
     });
     const target = document.getElementById(viewId);
-    if (target) target.classList.add('view-active');
+    if (target) {
+      target.classList.add('view-active');
+      if (direction === 'left') {
+        target.classList.add('view-slide-in-left');
+      } else if (direction === 'right') {
+        target.classList.add('view-slide-in-right');
+      }
+    }
     window.scrollTo(0, 0);
   },
 
@@ -78,6 +86,46 @@ const UI = {
         dot.classList.toggle('active', i === index);
       });
     };
+
+    this.attachSwipeHandlers(carousel);
+  },
+
+  /**
+   * Añade gestos táctiles (swipe) al carrusel para una navegación
+   * más fluida en móvil, además del scroll-snap nativo.
+   * @param {HTMLElement} carousel
+   */
+  attachSwipeHandlers(carousel) {
+    if (carousel._swipeAttached) return;
+    carousel._swipeAttached = true;
+
+    let startX = 0;
+    let startScroll = 0;
+    let isDragging = false;
+
+    carousel.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startScroll = carousel.scrollLeft;
+      isDragging = true;
+      carousel.style.scrollSnapType = 'none';
+    }, { passive: true });
+
+    carousel.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.touches[0].clientX - startX;
+      carousel.scrollLeft = startScroll - deltaX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', () => {
+      isDragging = false;
+      carousel.style.scrollSnapType = 'x mandatory';
+      // Snap to nearest card
+      const index = Math.round(carousel.scrollLeft / carousel.clientWidth);
+      carousel.scrollTo({
+        left: index * carousel.clientWidth,
+        behavior: 'smooth',
+      });
+    });
   },
 
   /**
@@ -137,6 +185,14 @@ const UI = {
     shareBtn.onclick = () => App.shareEvent(event.id);
     actions.appendChild(shareBtn);
 
+    const notifyBtn = document.createElement('button');
+    notifyBtn.className = 'icon-btn';
+    notifyBtn.textContent = event.notifyBefore ? '🔔' : '🔕';
+    if (event.notifyBefore) notifyBtn.classList.add('notify-active');
+    notifyBtn.setAttribute('aria-label', 'Aviso');
+    notifyBtn.onclick = () => App.openEditForm(event.id);
+    actions.appendChild(notifyBtn);
+
     card.appendChild(actions);
 
     this.updateCardCountdown(card, event);
@@ -188,10 +244,46 @@ const UI = {
   },
 
   /**
+   * Ordena eventos según el modo elegido.
+   * @param {Array<Object>} events
+   * @param {string} sortMode
+   * @returns {Array<Object>}
+   */
+  sortEvents(events, sortMode) {
+    const list = [...events];
+    switch (sortMode) {
+      case 'date-desc':
+        return list.sort((a, b) => Countdown.diffMs(b) - Countdown.diffMs(a));
+      case 'name':
+        return list.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+      case 'created':
+        return list.sort((a, b) => {
+          const aTime = parseInt((a.id || '').split('_')[1] || '0', 36);
+          const bTime = parseInt((b.id || '').split('_')[1] || '0', 36);
+          return bTime - aTime;
+        });
+      case 'date-asc':
+      default:
+        return list.sort((a, b) => Countdown.diffMs(a) - Countdown.diffMs(b));
+    }
+  },
+
+  /**
+   * Marca el chip de ordenación activo.
+   * @param {string} sortMode
+   */
+  renderSortBar(sortMode) {
+    document.querySelectorAll('.sort-chip').forEach((chip) => {
+      chip.classList.toggle('active', chip.dataset.sort === sortMode);
+    });
+  },
+
+  /**
    * Renderiza la lista completa de eventos (vista lista).
    * @param {Array<Object>} events
+   * @param {string} sortMode - 'date-asc' | 'date-desc' | 'name' | 'created'
    */
-  renderList(events) {
+  renderList(events, sortMode = 'date-asc') {
     const list = document.getElementById('event-list');
     const emptyState = document.getElementById('list-empty-state');
 
@@ -203,9 +295,7 @@ const UI = {
     }
     emptyState.classList.add('hidden');
 
-    const sorted = [...events].sort(
-      (a, b) => Countdown.diffMs(a) - Countdown.diffMs(b)
-    );
+    const sorted = this.sortEvents(events, sortMode);
 
     sorted.forEach((event) => {
       const li = document.createElement('li');
@@ -288,6 +378,22 @@ const UI = {
       };
       grid.appendChild(btn);
     });
+  },
+
+  /**
+   * Muestra un modal por id.
+   * @param {string} modalId
+   */
+  showModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+  },
+
+  /**
+   * Oculta un modal por id.
+   * @param {string} modalId
+   */
+  hideModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
   },
 
   /**

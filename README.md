@@ -39,23 +39,32 @@ next-appointment/
 
 - Crear, editar y eliminar eventos (nombre, fecha, hora, emoji, color)
 - Countdown en vivo (días, horas, minutos, segundos)
-- Carrusel de eventos con swipe + indicadores (dots)
-- Vista de lista ordenada por fecha
+- Carrusel de eventos con swipe táctil real + scroll-snap + indicadores (dots)
+- Vista de lista ordenada y filtrable (próximos, lejanos, nombre, recién creados)
 - Vista previa en tiempo real al crear/editar
 - Eventos recurrentes (anuales)
 - Pantalla de celebración con confetti al llegar a cero
 - Tema claro/oscuro (con detección automática del sistema)
-- Compartir evento (Web Share API / clipboard)
+- Transiciones de slide entre vistas
+- Compartir evento vía enlace (el receptor puede importar una copia a su propia lista, sin backend)
+- Avisos/notificaciones configurables (5 min / 1 hora / 1 día antes), mientras la app está abierta
 - Todo en localStorage, sin backend
 - PWA instalable con soporte offline básico
+
+## ⚠️ Notas sobre notificaciones
+
+Las notificaciones de aviso ("avisarme X antes") solo se disparan mientras la app está abierta o recién en segundo plano. iOS no permite alarmas programadas en background sin un servidor de Web Push, así que esta función es un complemento, no un recordatorio garantizado.
+
+## 🔗 Compartir eventos
+
+Al pulsar "Compartir" en un evento se genera un enlace con los datos codificados (`?import=...`). Quien abra ese enlace verá un modal para añadir una copia del evento a su propia lista. Es una copia independiente: si el creador edita el evento después, los cambios no se sincronizan automáticamente.
 
 ## 🔜 Pendiente / ideas futuras
 
 - Exportar evento como imagen (canvas / html2canvas)
 - Fondos personalizables (color, gradiente, foto)
 - Modo "tiempo transcurrido" (eventos en el pasado)
-- Notificaciones push programadas (PWA, limitado en iOS)
-- Sincronización entre dispositivos vía URL con parámetros
+- Sincronización en tiempo real entre dispositivos (requeriría backend ligero, ej. Firebase)
 
 ## 🛠️ Stack
 

@@ -44,6 +44,13 @@
         <span class="icon-btn placeholder"></span>
       </header>
 
+      <div class="sort-bar" id="sort-bar">
+        <button class="sort-chip active" data-sort="date-asc">Próximos primero</button>
+        <button class="sort-chip" data-sort="date-desc">Lejanos primero</button>
+        <button class="sort-chip" data-sort="name">Nombre A-Z</button>
+        <button class="sort-chip" data-sort="created">Recién creados</button>
+      </div>
+
       <ul id="event-list" class="event-list"></ul>
 
       <div id="list-empty-state" class="empty-state hidden">
@@ -100,6 +107,17 @@
           </label>
         </div>
 
+        <div class="form-group">
+          <label for="event-notify">Avisarme antes</label>
+          <select id="event-notify">
+            <option value="">No avisar</option>
+            <option value="300">5 minutos antes</option>
+            <option value="3600">1 hora antes</option>
+            <option value="86400">1 día antes</option>
+          </select>
+          <p class="form-hint" id="notify-hint">Necesitas tener la app abierta (o en segundo plano reciente) para recibir el aviso.</p>
+        </div>
+
         <!-- Live preview -->
         <div class="form-group">
           <label>Vista previa</label>
@@ -126,6 +144,36 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- ===================== IMPORT MODAL ===================== -->
+  <div id="modal-import" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-emoji" id="import-emoji">⏳</div>
+      <h2 id="import-title">Evento compartido</h2>
+      <p id="import-name" class="modal-name"></p>
+      <p id="import-date" class="modal-date"></p>
+      <div class="modal-actions">
+        <button id="btn-import-cancel" class="btn-secondary">Descartar</button>
+        <button id="btn-import-accept" class="btn-primary">Añadir a mis eventos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SHARE MODAL ===================== -->
+  <div id="modal-share" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Compartir evento</h2>
+      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista.</p>
+      <div class="share-link-row">
+        <input type="text" id="share-link-input" readonly />
+        <button id="btn-copy-link" class="btn-primary">Copiar</button>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-share-native" class="btn-secondary hidden">Compartir…</button>
+        <button id="btn-share-close" class="btn-secondary">Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <script src="js/storage.js"></script>
