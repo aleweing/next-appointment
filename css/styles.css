@@ -28,13 +28,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+html {
   height: 100%;
 }
 
 body {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -44,21 +48,30 @@ body {
 
 #app {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ===== Views ===== */
 .view {
   display: none;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
-  padding-bottom: 100px;
-  animation: fadeIn 0.3s ease;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(100px, calc(env(safe-area-inset-bottom) + 90px));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  box-sizing: border-box;
 }
 
 .view-active {
@@ -123,7 +136,8 @@ body {
   scrollbar-width: none;
   padding: 8px 0 24px;
   flex: 1;
-  align-items: center;
+  min-height: 0;
+  align-items: stretch;
 }
 
 .carousel::-webkit-scrollbar {
@@ -133,15 +147,17 @@ body {
 .event-card {
   scroll-snap-align: center;
   min-width: 100%;
+  flex-shrink: 0;
   background: var(--bg-card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 40px 28px;
+  padding: clamp(20px, 6vh, 40px) clamp(16px, 6vw, 28px);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  gap: 12px;
+  gap: clamp(8px, 2vh, 12px);
   border: 1px solid var(--border);
   position: relative;
 }
@@ -151,17 +167,17 @@ body {
 }
 
 .card-emoji {
-  font-size: 4rem;
+  font-size: clamp(2.5rem, 10vh, 4rem);
   line-height: 1;
 }
 
 .card-name {
-  font-size: 1.4rem;
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
   font-weight: 700;
 }
 
 .card-countdown {
-  font-size: 2rem;
+  font-size: clamp(1.4rem, 6vw, 2rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--accent-color, var(--accent));
@@ -170,7 +186,7 @@ body {
 
 .card-countdown-units {
   display: flex;
-  gap: 14px;
+  gap: clamp(6px, 2vw, 14px);
   justify-content: center;
 }
 
@@ -178,11 +194,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 56px;
+  min-width: clamp(42px, 12vw, 56px);
 }
 
 .countdown-value {
-  font-size: 1.9rem;
+  font-size: clamp(1.3rem, 6vw, 1.9rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--accent-color, var(--accent));
@@ -271,7 +287,7 @@ body {
 /* ===== FAB ===== */
 .fab {
   position: fixed;
-  bottom: 28px;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
   left: 50%;
   transform: translateX(-50%);
   width: 60px;
@@ -496,6 +512,8 @@ input:focus {
 #view-celebration {
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  position: relative;
 }
 
 .celebration-content {
@@ -505,12 +523,13 @@ input:focus {
   gap: 16px;
   text-align: center;
   position: relative;
+  z-index: 1;
   flex: 1;
   justify-content: center;
 }
 
 .celebration-emoji {
-  font-size: 5rem;
+  font-size: clamp(3rem, 12vh, 5rem);
   animation: bounce 1s infinite;
 }
 
@@ -529,6 +548,7 @@ input:focus {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  z-index: 0;
 }
 
 .confetti-piece {
@@ -549,12 +569,6 @@ input:focus {
 
 .hidden {
   display: none !important;
-}
-
-/* ===== View transitions (slide) ===== */
-.view {
-  transform: translateX(0);
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s ease;
 }
 
 .view-slide-in-right {
@@ -617,15 +631,50 @@ input:focus {
   margin-top: -2px;
 }
 
-select#event-notify {
+.notify-row {
+  display: flex;
+  gap: 10px;
+}
+
+.notify-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  font-size: 1rem;
-  color: var(--text);
+  padding: 10px 6px;
+}
+
+.notify-field input[type="number"] {
   width: 100%;
-  appearance: none;
+  text-align: center;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.notify-field input[type="number"]::-webkit-outer-spin-button,
+.notify-field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.notify-field input:focus {
+  outline: none;
+}
+
+.notify-field span {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ===== Secondary button ===== */
@@ -668,6 +717,9 @@ select#event-notify {
   padding: 28px;
   max-width: 400px;
   width: 100%;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
   text-align: center;
   box-shadow: var(--shadow);
   display: flex;

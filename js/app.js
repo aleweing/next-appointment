@@ -128,7 +128,6 @@ const App = {
 
   /** Comprueba si algún evento acaba de llegar a cero y muestra celebración */
   checkCelebrations(events) {
-    const now = Date.now();
     events.forEach((event) => {
       if (event.recurring) return;
       const diff = Countdown.diffMs(event);
@@ -136,7 +135,15 @@ const App = {
       if (diff <= 0 && diff > -2000 && !event._celebrated) {
         event._celebrated = true;
         Storage.upsert(event);
-        this.showCelebration(event);
+
+        // No interrumpir si el usuario está editando un formulario o con un modal abierto
+        const formOpen = document.getElementById('view-form').classList.contains('view-active');
+        const modalOpen = !document.getElementById('modal-import').classList.contains('hidden')
+          || !document.getElementById('modal-share').classList.contains('hidden');
+
+        if (!formOpen && !modalOpen) {
+          this.showCelebration(event);
+        }
       }
     });
   },
@@ -144,7 +151,7 @@ const App = {
   showCelebration(event) {
     document.getElementById('celebration-emoji').textContent = event.emoji || '🎉';
     document.getElementById('celebration-name').textContent = `"${event.name}" — ¡hoy es el día!`;
-    UI.showView('view-celebration');
+    UI.showView('view-celebration', 'right');
     UI.launchConfetti();
   },
 
@@ -221,7 +228,9 @@ const App = {
     document.getElementById('event-time').value = '00:00';
     document.getElementById('event-emoji').value = '⏳';
     document.getElementById('event-color').value = COLOR_OPTIONS[0];
-    document.getElementById('event-notify').value = '';
+    document.getElementById('event-notify-days').value = 0;
+    document.getElementById('event-notify-hours').value = 0;
+    document.getElementById('event-notify-minutes').value = 0;
 
     // Default date: tomorrow
     const tomorrow = new Date();
@@ -251,7 +260,11 @@ const App = {
     document.getElementById('event-emoji').value = event.emoji || '⏳';
     document.getElementById('event-color').value = event.color || COLOR_OPTIONS[0];
     document.getElementById('event-recurring').checked = !!event.recurring;
-    document.getElementById('event-notify').value = event.notifyBefore || '';
+
+    const notifySeconds = Number(event.notifyBefore) || 0;
+    document.getElementById('event-notify-days').value = Math.floor(notifySeconds / 86400);
+    document.getElementById('event-notify-hours').value = Math.floor((notifySeconds % 86400) / 3600);
+    document.getElementById('event-notify-minutes').value = Math.floor((notifySeconds % 3600) / 60);
 
     UI.renderEmojiGrid(event.emoji);
     UI.renderColorGrid(event.color);
@@ -270,7 +283,12 @@ const App = {
     const emoji = document.getElementById('event-emoji').value || '⏳';
     const color = document.getElementById('event-color').value || COLOR_OPTIONS[0];
     const recurring = document.getElementById('event-recurring').checked;
-    const notifyBefore = document.getElementById('event-notify').value || null;
+
+    const notifyDays = Math.max(0, parseInt(document.getElementById('event-notify-days').value, 10) || 0);
+    const notifyHours = Math.max(0, parseInt(document.getElementById('event-notify-hours').value, 10) || 0);
+    const notifyMinutes = Math.max(0, parseInt(document.getElementById('event-notify-minutes').value, 10) || 0);
+    const notifySeconds = notifyDays * 86400 + notifyHours * 3600 + notifyMinutes * 60;
+    const notifyBefore = notifySeconds > 0 ? notifySeconds : null;
 
     if (!name || !date) return;
 
