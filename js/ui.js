@@ -125,7 +125,7 @@ const UI = {
    * en lugar de requerir arrastrar más de la mitad de la pantalla.
    * @param {HTMLElement} carousel
    */
- attachSwipeHandlers(carousel) {
+  attachSwipeHandlers(carousel) {
   if (carousel._swipeAttached) return;
   carousel._swipeAttached = true;
 
@@ -190,7 +190,6 @@ const UI = {
     requestAnimationFrame(animate);
   });
 },
-
 
   /**
    * Crea el elemento DOM de una card de evento (vista principal).
