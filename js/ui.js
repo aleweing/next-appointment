@@ -140,7 +140,7 @@ const UI = {
     carousel.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
       startScroll = carousel.scrollLeft;
-      startIndex = Math.round(carousel.scrollLeft / carousel.clientWidth);
+      startIndex = Math.floor(carousel.scrollLeft / carousel.clientWidth);
       startTime = Date.now();
       isDragging = true;
       carousel.style.scrollSnapType = 'none';
@@ -150,7 +150,8 @@ const UI = {
       if (!isDragging) return;
       const deltaX = e.touches[0].clientX - startX;
       carousel.scrollLeft = startScroll - deltaX;
-    }, { passive: true });
+      e.preventDefault();
+    }, { passive: false });
 
     carousel.addEventListener('touchend', (e) => {
       if (!isDragging) return;
@@ -158,7 +159,7 @@ const UI = {
       carousel.style.scrollSnapType = 'x mandatory';
 
       const width = carousel.clientWidth;
-      const totalDelta = startScroll - carousel.scrollLeft; // positivo si arrastró hacia la izquierda
+      const totalDelta = carousel.scrollLeft - startScroll; // invertido
       const elapsed = Date.now() - startTime;
       const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1); // px/ms
 
