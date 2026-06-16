@@ -189,7 +189,7 @@ const UI = {
 
     requestAnimationFrame(animate);
   });
-}
+},
 
 
   /**
