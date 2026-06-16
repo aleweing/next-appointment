@@ -125,65 +125,70 @@ const UI = {
    * en lugar de requerir arrastrar más de la mitad de la pantalla.
    * @param {HTMLElement} carousel
    */
- attachSwipeHandlers(carousel) {
+attachSwipeHandlers(carousel) {
   if (carousel._swipeAttached) return;
   carousel._swipeAttached = true;
 
   let startX = 0;
   let startScroll = 0;
-  let startIndex = 0;
   let startTime = 0;
   let isDragging = false;
 
-  const getCardCount = () => carousel.children.length;
+  const cardWidth = () => carousel.clientWidth;
+  const cardCount = () => carousel.children.length;
 
-  carousel.addEventListener('touchstart', (e) => {
+  // Inicio del gesto
+  carousel.addEventListener("touchstart", (e) => {
     startX = e.touches[0].clientX;
     startScroll = carousel.scrollLeft;
-    startIndex = Math.floor(carousel.scrollLeft / carousel.clientWidth);
     startTime = Date.now();
     isDragging = true;
-    carousel.style.scrollSnapType = 'none';
+    carousel.style.scrollSnapType = "none";
   }, { passive: true });
 
-  carousel.addEventListener('touchmove', (e) => {
+  // Movimiento
+  carousel.addEventListener("touchmove", (e) => {
     if (!isDragging) return;
     const deltaX = e.touches[0].clientX - startX;
     carousel.scrollLeft = startScroll - deltaX;
   }, { passive: false });
 
-  carousel.addEventListener('touchend', () => {
+  // Fin del gesto
+  carousel.addEventListener("touchend", () => {
     if (!isDragging) return;
     isDragging = false;
-    carousel.style.scrollSnapType = 'x mandatory';
+    carousel.style.scrollSnapType = "x mandatory";
 
-    const width = carousel.clientWidth;
-    const totalDelta = carousel.scrollLeft - startScroll;
+    const width = cardWidth();
+    const delta = carousel.scrollLeft - startScroll;
     const elapsed = Date.now() - startTime;
-    const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1);
+    const velocity = delta / Math.max(elapsed, 1); // px/ms
 
-    const DISTANCE_THRESHOLD = width * 0.35;
-    const VELOCITY_THRESHOLD = 0.35;
+    // índice actual y destino
+    let currentIndex = Math.round(carousel.scrollLeft / width);
+    let targetIndex = currentIndex;
 
-    let targetIndex = startIndex;
+    const DISTANCE_THRESHOLD = width * 0.25;
+    const VELOCITY_THRESHOLD = 0.4;
 
-    if (Math.abs(totalDelta) > DISTANCE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
-      targetIndex = totalDelta > 0 ? startIndex + 1 : startIndex - 1;
+    if (Math.abs(delta) > DISTANCE_THRESHOLD || Math.abs(velocity) > VELOCITY_THRESHOLD) {
+      targetIndex = delta > 0 ? currentIndex + 1 : currentIndex - 1;
     }
 
-    targetIndex = Math.max(0, Math.min(getCardCount() - 1, targetIndex));
+    targetIndex = Math.max(0, Math.min(cardCount() - 1, targetIndex));
 
-    // Animación con rebote
+    // Animación con rebote elástico
     const targetScroll = targetIndex * width;
     const start = carousel.scrollLeft;
     const distance = targetScroll - start;
     const duration = 400; // ms
-    const overshoot = 0.08; // porcentaje de rebote
+    const overshoot = 0.12; // rebote
+
     const startAnim = performance.now();
 
     function animate(time) {
       const progress = Math.min((time - startAnim) / duration, 1);
-      // easeOutBack: rebote elástico
+      // easeOutBack (rebote elástico)
       const eased = 1 + overshoot * Math.sin(progress * Math.PI) - Math.pow(1 - progress, 3);
       carousel.scrollLeft = start + distance * eased;
       if (progress < 1) requestAnimationFrame(animate);
