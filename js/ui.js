@@ -125,7 +125,7 @@ const UI = {
    * en lugar de requerir arrastrar más de la mitad de la pantalla.
    * @param {HTMLElement} carousel
    */
-  attachSwipeHandlers(carousel) {
+ attachSwipeHandlers(carousel) {
   if (carousel._swipeAttached) return;
   carousel._swipeAttached = true;
 
