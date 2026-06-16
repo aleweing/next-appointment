@@ -125,61 +125,72 @@ const UI = {
    * en lugar de requerir arrastrar más de la mitad de la pantalla.
    * @param {HTMLElement} carousel
    */
-  attachSwipeHandlers(carousel) {
-    if (carousel._swipeAttached) return;
-    carousel._swipeAttached = true;
+ attachSwipeHandlers(carousel) {
+  if (carousel._swipeAttached) return;
+  carousel._swipeAttached = true;
 
-    let startX = 0;
-    let startScroll = 0;
-    let startIndex = 0;
-    let startTime = 0;
-    let isDragging = false;
+  let startX = 0;
+  let startScroll = 0;
+  let startIndex = 0;
+  let startTime = 0;
+  let isDragging = false;
 
-    const getCardCount = () => carousel.children.length;
+  const getCardCount = () => carousel.children.length;
 
-    carousel.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startScroll = carousel.scrollLeft;
-      startIndex = Math.floor(carousel.scrollLeft / carousel.clientWidth);
-      startTime = Date.now();
-      isDragging = true;
-      carousel.style.scrollSnapType = 'none';
-    }, { passive: true });
+  carousel.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startScroll = carousel.scrollLeft;
+    startIndex = Math.floor(carousel.scrollLeft / carousel.clientWidth);
+    startTime = Date.now();
+    isDragging = true;
+    carousel.style.scrollSnapType = 'none';
+  }, { passive: true });
 
-    carousel.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      const deltaX = e.touches[0].clientX - startX;
-      carousel.scrollLeft = startScroll - deltaX;
-      e.preventDefault();
-    }, { passive: false });
+  carousel.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const deltaX = e.touches[0].clientX - startX;
+    carousel.scrollLeft = startScroll - deltaX;
+  }, { passive: false });
 
-    carousel.addEventListener('touchend', (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      carousel.style.scrollSnapType = 'x mandatory';
+  carousel.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    carousel.style.scrollSnapType = 'x mandatory';
 
-      const width = carousel.clientWidth;
-      const totalDelta = carousel.scrollLeft - startScroll; // invertido
-      const elapsed = Date.now() - startTime;
-      const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1); // px/ms
+    const width = carousel.clientWidth;
+    const totalDelta = carousel.scrollLeft - startScroll;
+    const elapsed = Date.now() - startTime;
+    const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1);
 
-      const DISTANCE_THRESHOLD = width * 0.18; // ~18% del ancho ya cambia de card
-      const VELOCITY_THRESHOLD = 0.35; // swipe rápido aunque sea corto
+    const DISTANCE_THRESHOLD = width * 0.18;
+    const VELOCITY_THRESHOLD = 0.35;
 
-      let targetIndex = startIndex;
+    let targetIndex = startIndex;
 
-      if (Math.abs(totalDelta) > DISTANCE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
-        targetIndex = totalDelta > 0 ? startIndex + 1 : startIndex - 1;
-      }
+    if (Math.abs(totalDelta) > DISTANCE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
+      targetIndex = totalDelta > 0 ? startIndex + 1 : startIndex - 1;
+    }
 
-      targetIndex = Math.max(0, Math.min(getCardCount() - 1, targetIndex));
+    targetIndex = Math.max(0, Math.min(getCardCount() - 1, targetIndex));
 
-      carousel.scrollTo({
-        left: targetIndex * width,
-        behavior: 'smooth',
-      });
-    });
-  },
+    // Animación suave hacia el card objetivo
+    const targetScroll = targetIndex * width;
+    const start = carousel.scrollLeft;
+    const distance = targetScroll - start;
+    const duration = 300; // ms
+    const startAnim = performance.now();
+
+    function animate(time) {
+      const progress = Math.min((time - startAnim) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      carousel.scrollLeft = start + distance * eased;
+      if (progress < 1) requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  });
+}
+
 
   /**
    * Crea el elemento DOM de una card de evento (vista principal).
