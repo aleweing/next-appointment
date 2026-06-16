@@ -92,7 +92,8 @@ const UI = {
 
   /**
    * Añade gestos táctiles (swipe) al carrusel para una navegación
-   * más fluida en móvil, además del scroll-snap nativo.
+   * fluida en móvil: basta un swipe corto o rápido para cambiar de card,
+   * en lugar de requerir arrastrar más de la mitad de la pantalla.
    * @param {HTMLElement} carousel
    */
   attachSwipeHandlers(carousel) {
@@ -101,11 +102,17 @@ const UI = {
 
     let startX = 0;
     let startScroll = 0;
+    let startIndex = 0;
+    let startTime = 0;
     let isDragging = false;
+
+    const getCardCount = () => carousel.children.length;
 
     carousel.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
       startScroll = carousel.scrollLeft;
+      startIndex = Math.round(carousel.scrollLeft / carousel.clientWidth);
+      startTime = Date.now();
       isDragging = true;
       carousel.style.scrollSnapType = 'none';
     }, { passive: true });
@@ -116,13 +123,29 @@ const UI = {
       carousel.scrollLeft = startScroll - deltaX;
     }, { passive: true });
 
-    carousel.addEventListener('touchend', () => {
+    carousel.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
       isDragging = false;
       carousel.style.scrollSnapType = 'x mandatory';
-      // Snap to nearest card
-      const index = Math.round(carousel.scrollLeft / carousel.clientWidth);
+
+      const width = carousel.clientWidth;
+      const totalDelta = startScroll - carousel.scrollLeft; // positivo si arrastró hacia la izquierda
+      const elapsed = Date.now() - startTime;
+      const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1); // px/ms
+
+      const DISTANCE_THRESHOLD = width * 0.18; // ~18% del ancho ya cambia de card
+      const VELOCITY_THRESHOLD = 0.35; // swipe rápido aunque sea corto
+
+      let targetIndex = startIndex;
+
+      if (Math.abs(totalDelta) > DISTANCE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
+        targetIndex = totalDelta > 0 ? startIndex + 1 : startIndex - 1;
+      }
+
+      targetIndex = Math.max(0, Math.min(getCardCount() - 1, targetIndex));
+
       carousel.scrollTo({
-        left: index * carousel.clientWidth,
+        left: targetIndex * width,
         behavior: 'smooth',
       });
     });

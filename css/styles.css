@@ -137,6 +137,7 @@ body {
   padding: 8px 0 24px;
   flex: 1;
   min-height: 0;
+  touch-action: pan-y;
   align-items: stretch;
 }
 
@@ -771,6 +772,34 @@ input:focus {
   flex-shrink: 0;
   padding: 10px 16px;
   font-size: 0.85rem;
+}
+
+/* ===== Paste-to-import modal ===== */
+.paste-import-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+}
+
+.paste-import-textarea:focus {
+  outline: 2px solid var(--accent);
+}
+
+.paste-import-error {
+  font-size: 0.82rem;
+  color: #e74c3c;
+  text-align: left;
+}
+
+.paste-import-error.hidden {
+  display: none;
 }
 
 /* ===== Notification bell on card ===== */

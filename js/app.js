@@ -63,6 +63,14 @@ const App = {
     document.getElementById('btn-import-cancel').addEventListener('click', () => this.dismissImport());
     document.getElementById('btn-import-accept').addEventListener('click', () => this.acceptImport());
 
+    // Paste-to-import modal
+    document.getElementById('btn-open-import').addEventListener('click', () => this.openPasteImportModal());
+    document.getElementById('btn-paste-import-cancel').addEventListener('click', () => UI.hideModal('modal-paste-import'));
+    document.getElementById('btn-paste-import-confirm').addEventListener('click', () => this.confirmPasteImport());
+    document.getElementById('modal-paste-import').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-paste-import') UI.hideModal('modal-paste-import');
+    });
+
     // Close modals when clicking the overlay (outside the card)
     document.getElementById('modal-import').addEventListener('click', (e) => {
       if (e.target.id === 'modal-import') this.dismissImport();
@@ -424,8 +432,45 @@ const App = {
     const encoded = params.get('import');
     if (!encoded) return;
 
+    this.tryShowImportPreview(encoded, { cleanUrl: true });
+  },
+
+  /**
+   * Extrae el código base64 a partir de lo que el usuario haya pegado:
+   * puede ser una URL completa con ?import=..., o solo el código.
+   * @param {string} rawInput
+   * @returns {string|null}
+   */
+  extractEncodedFromInput(rawInput) {
+    const trimmed = (rawInput || '').trim();
+    if (!trimmed) return null;
+
+    // ¿Es una URL? intentamos extraer el parámetro "import"
+    try {
+      const url = new URL(trimmed);
+      const fromUrl = url.searchParams.get('import');
+      if (fromUrl) return fromUrl;
+    } catch (e) {
+      // No es una URL válida, seguimos asumiendo que es el código directo
+    }
+
+    // Si parece contener "import=" sin ser una URL completa (ej. pegaron solo la query)
+    const match = trimmed.match(/import=([^&\s]+)/);
+    if (match) return decodeURIComponent(match[1]);
+
+    // Asumimos que el texto pegado es directamente el código
+    return trimmed;
+  },
+
+  /**
+   * Decodifica un código y, si es válido, muestra el modal de preview de import.
+   * @param {string} encoded
+   * @param {{cleanUrl?: boolean}} options
+   * @returns {boolean} true si se pudo decodificar y mostrar
+   */
+  tryShowImportPreview(encoded, options = {}) {
     const decoded = decodeSharedEvent(encoded);
-    if (!decoded) return;
+    if (!decoded) return false;
 
     this.pendingImport = decoded;
 
@@ -434,6 +479,35 @@ const App = {
     document.getElementById('import-date').textContent = Countdown.formatDate(decoded);
 
     UI.showModal('modal-import');
+
+    if (options.cleanUrl) this.cleanImportFromUrl();
+
+    return true;
+  },
+
+  /** Abre el modal para pegar manualmente un enlace o código de evento compartido */
+  openPasteImportModal() {
+    document.getElementById('paste-import-input').value = '';
+    document.getElementById('paste-import-error').classList.add('hidden');
+    UI.showModal('modal-paste-import');
+    setTimeout(() => document.getElementById('paste-import-input').focus(), 50);
+  },
+
+  /** Confirma el contenido pegado, lo intenta decodificar y pasa al preview */
+  confirmPasteImport() {
+    const raw = document.getElementById('paste-import-input').value;
+    const encoded = this.extractEncodedFromInput(raw);
+    const errorEl = document.getElementById('paste-import-error');
+
+    const success = encoded && this.tryShowImportPreview(encoded);
+
+    if (!success) {
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    errorEl.classList.add('hidden');
+    UI.hideModal('modal-paste-import');
   },
 
   /** Acepta el evento importado y lo añade a los eventos del usuario */
@@ -456,7 +530,6 @@ const App = {
     Storage.upsert(event);
     this.pendingImport = null;
     UI.hideModal('modal-import');
-    this.cleanImportFromUrl();
     this.renderAll();
   },
 
@@ -464,7 +537,6 @@ const App = {
   dismissImport() {
     this.pendingImport = null;
     UI.hideModal('modal-import');
-    this.cleanImportFromUrl();
   },
 
   /** Elimina el parámetro ?import= de la URL sin recargar la página */

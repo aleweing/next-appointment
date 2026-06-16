@@ -41,7 +41,7 @@
       <header class="topbar">
         <button class="icon-btn back-btn" data-target="view-main" aria-label="Volver">←</button>
         <h1 class="logo">Mis eventos</h1>
-        <span class="icon-btn placeholder"></span>
+        <button id="btn-open-import" class="icon-btn" aria-label="Importar evento">📥</button>
       </header>
 
       <div class="sort-bar" id="sort-bar">
@@ -154,6 +154,20 @@
 
   </div>
 
+  <!-- ===================== PASTE-TO-IMPORT MODAL ===================== -->
+  <div id="modal-paste-import" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Importar evento</h2>
+      <p class="modal-hint">Pega aquí el enlace o el código que te han compartido.</p>
+      <textarea id="paste-import-input" class="paste-import-textarea" placeholder="https://...?import=... o solo el código" rows="3"></textarea>
+      <p id="paste-import-error" class="paste-import-error hidden">No hemos podido leer ese enlace o código. Comprueba que esté completo.</p>
+      <div class="modal-actions">
+        <button id="btn-paste-import-cancel" class="btn-secondary">Cancelar</button>
+        <button id="btn-paste-import-confirm" class="btn-primary">Buscar evento</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== IMPORT MODAL ===================== -->
   <div id="modal-import" class="modal-overlay hidden">
     <div class="modal-card">
@@ -172,7 +186,7 @@
   <div id="modal-share" class="modal-overlay hidden">
     <div class="modal-card">
       <h2>Compartir evento</h2>
-      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista.</p>
+      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista. Si la otra persona tiene la app instalada en iPhone, el enlace puede abrirse en Safari en vez de en la app: puede copiarlo y pegarlo en "Importar evento" (📥) dentro de la app para tenerlo ahí también.</p>
       <div class="share-link-row">
         <input type="text" id="share-link-input" readonly />
         <button id="btn-copy-link" class="btn-primary">Copiar</button>
