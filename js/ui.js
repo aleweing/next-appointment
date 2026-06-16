@@ -173,16 +173,18 @@ const UI = {
 
     targetIndex = Math.max(0, Math.min(getCardCount() - 1, targetIndex));
 
-    // Animación suave hacia el card objetivo
+    // Animación con rebote
     const targetScroll = targetIndex * width;
     const start = carousel.scrollLeft;
     const distance = targetScroll - start;
-    const duration = 300; // ms
+    const duration = 400; // ms
+    const overshoot = 0.08; // porcentaje de rebote
     const startAnim = performance.now();
 
     function animate(time) {
       const progress = Math.min((time - startAnim) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      // easeOutBack: rebote elástico
+      const eased = 1 + overshoot * Math.sin(progress * Math.PI) - Math.pow(1 - progress, 3);
       carousel.scrollLeft = start + distance * eased;
       if (progress < 1) requestAnimationFrame(animate);
     }
