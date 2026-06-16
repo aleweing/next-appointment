@@ -12,6 +12,35 @@ const COLOR_OPTIONS = [
   '#fdcb6e', '#e84393', '#2d3436', '#00cec9',
 ];
 
+/**
+ * ⚠️ ÚNICO LUGAR A EDITAR para añadir, quitar o renombrar categorías.
+ * Cada categoría es { id, label, emoji }.
+ * - "id" se guarda en los eventos y NO debe cambiarse una vez en uso
+ *   (si lo cambias, los eventos ya creados con ese id quedarán como "Otros").
+ * - "label" es el texto visible, se puede cambiar libremente.
+ * - "emoji" se usa como icono en los chips de filtro.
+ * El id 'other' siempre debe existir: es el valor por defecto/fallback.
+ */
+const CATEGORIES = [
+  { id: 'birthday', label: 'Cumpleaños', emoji: '🎂' },
+  { id: 'health', label: 'Salud', emoji: '🩺' },
+  { id: 'party', label: 'Fiestas', emoji: '🎉' },
+  { id: 'fair', label: 'Ferias', emoji: '🎪' },
+  { id: 'festival', label: 'Festivales', emoji: '🎶' },
+  { id: 'travel', label: 'Viajes', emoji: '✈️' },
+  { id: 'other', label: 'Otros', emoji: '⏳' },
+];
+
+const DEFAULT_CATEGORY_ID = 'other';
+
+/**
+ * Devuelve el objeto de categoría a partir de su id, con fallback a "Otros".
+ * @param {string} id
+ */
+function getCategoryById(id) {
+  return CATEGORIES.find((c) => c.id === id) || CATEGORIES.find((c) => c.id === DEFAULT_CATEGORY_ID);
+}
+
 const UI = {
   /**
    * Cambia la vista activa, con una transición de slide.
@@ -164,6 +193,12 @@ const UI = {
     const elapsed = Countdown.hasElapsed(event);
     if (elapsed) card.classList.add('elapsed');
 
+    const category = getCategoryById(event.category);
+    const categoryBadge = document.createElement('div');
+    categoryBadge.className = 'card-category-badge';
+    categoryBadge.textContent = `${category.emoji} ${category.label}`;
+    card.appendChild(categoryBadge);
+
     if (event.recurring) {
       const badge = document.createElement('div');
       badge.className = 'card-badge';
@@ -305,20 +340,28 @@ const UI = {
    * Renderiza la lista completa de eventos (vista lista).
    * @param {Array<Object>} events
    * @param {string} sortMode - 'date-asc' | 'date-desc' | 'name' | 'created'
+   * @param {string} categoryFilter - 'all' o id de categoría
    */
-  renderList(events, sortMode = 'date-asc') {
+  renderList(events, sortMode = 'date-asc', categoryFilter = 'all') {
     const list = document.getElementById('event-list');
     const emptyState = document.getElementById('list-empty-state');
 
     list.innerHTML = '';
 
-    if (!events.length) {
+    const filtered = categoryFilter === 'all'
+      ? events
+      : events.filter((e) => (e.category || DEFAULT_CATEGORY_ID) === categoryFilter);
+
+    if (!filtered.length) {
       emptyState.classList.remove('hidden');
+      emptyState.querySelector('p:last-of-type').textContent = events.length
+        ? 'No hay eventos en esta categoría.'
+        : 'No hay eventos creados todavía.';
       return;
     }
     emptyState.classList.add('hidden');
 
-    const sorted = this.sortEvents(events, sortMode);
+    const sorted = this.sortEvents(filtered, sortMode);
 
     sorted.forEach((event) => {
       const li = document.createElement('li');
@@ -337,11 +380,17 @@ const UI = {
       name.className = 'event-list-name';
       name.textContent = event.name;
 
+      const category = getCategoryById(event.category);
+      const categoryTag = document.createElement('span');
+      categoryTag.className = 'event-list-category';
+      categoryTag.textContent = `${category.emoji} ${category.label}`;
+
       const date = document.createElement('div');
       date.className = 'event-list-date';
       date.textContent = Countdown.formatDate(event);
 
       info.appendChild(name);
+      info.appendChild(categoryTag);
       info.appendChild(date);
 
       const countdown = document.createElement('div');
@@ -400,6 +449,57 @@ const UI = {
         App.updatePreview();
       };
       grid.appendChild(btn);
+    });
+  },
+
+  /**
+   * Renderiza el grid de selección de categoría en el formulario.
+   * @param {string} selected - id de categoría
+   */
+  renderCategoryGrid(selected) {
+    const grid = document.getElementById('category-grid');
+    grid.innerHTML = '';
+
+    CATEGORIES.forEach((cat) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'category-option' + (cat.id === selected ? ' selected' : '');
+      btn.innerHTML = `<span class="category-emoji">${cat.emoji}</span><span>${cat.label}</span>`;
+      btn.onclick = () => {
+        document.getElementById('event-category').value = cat.id;
+        grid.querySelectorAll('.category-option').forEach((el) => el.classList.remove('selected'));
+        btn.classList.add('selected');
+      };
+      grid.appendChild(btn);
+    });
+  },
+
+  /**
+   * Renderiza los chips de filtro por categoría en la vista de lista.
+   * @param {Array<Object>} events - para calcular qué categorías tienen eventos
+   * @param {string} activeCategory - 'all' o id de categoría
+   */
+  renderCategoryFilterBar(events, activeCategory) {
+    const bar = document.getElementById('category-filter-bar');
+    bar.innerHTML = '';
+
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = 'category-chip' + (activeCategory === 'all' ? ' active' : '');
+    allChip.textContent = 'Todas';
+    allChip.onclick = () => App.setActiveCategory('all');
+    bar.appendChild(allChip);
+
+    CATEGORIES.forEach((cat) => {
+      const hasEvents = events.some((e) => (e.category || DEFAULT_CATEGORY_ID) === cat.id);
+      if (!hasEvents) return;
+
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'category-chip' + (activeCategory === cat.id ? ' active' : '');
+      chip.textContent = `${cat.emoji} ${cat.label}`;
+      chip.onclick = () => App.setActiveCategory(cat.id);
+      bar.appendChild(chip);
     });
   },
 

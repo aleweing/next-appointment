@@ -491,6 +491,91 @@ input:focus {
   border-color: var(--text);
 }
 
+/* ===== Category grid (form) ===== */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.category-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--transition), transform var(--transition);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.category-option .category-emoji {
+  font-size: 1.3rem;
+}
+
+.category-option.selected {
+  border-color: var(--accent);
+  transform: scale(1.04);
+}
+
+/* ===== Category filter bar (list view) ===== */
+.category-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 16px;
+}
+
+.category-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.category-chip {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+
+.category-chip.active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+/* ===== Category badge on card ===== */
+.card-category-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+/* ===== Category tag in list item ===== */
+.event-list-category {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* ===== Preview card ===== */
 .preview-card {
   padding: 24px;

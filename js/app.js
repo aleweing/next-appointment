@@ -5,6 +5,7 @@
 const App = {
   currentEditId: null,
   tickInterval: null,
+  activeCategory: 'all',
 
   init() {
     // Theme
@@ -44,7 +45,7 @@ const App = {
       chip.addEventListener('click', () => {
         Storage.setSortMode(chip.dataset.sort);
         UI.renderSortBar(chip.dataset.sort);
-        UI.renderList(Storage.getAll(), chip.dataset.sort);
+        UI.renderList(Storage.getAll(), chip.dataset.sort, this.activeCategory);
       });
     });
 
@@ -95,10 +96,22 @@ const App = {
     const events = Storage.getAll();
     const sortMode = Storage.getSortMode();
     UI.renderCarousel(events);
-    UI.renderList(events, sortMode);
+    UI.renderCategoryFilterBar(events, this.activeCategory);
+    UI.renderList(events, sortMode, this.activeCategory);
     UI.renderSortBar(sortMode);
     this.checkCelebrations(events);
     this.checkNotifications(events);
+  },
+
+  /**
+   * Cambia la categoría activa del filtro en la vista lista y vuelve a renderizar.
+   * @param {string} categoryId - 'all' o id de categoría
+   */
+  setActiveCategory(categoryId) {
+    this.activeCategory = categoryId;
+    const events = Storage.getAll();
+    UI.renderCategoryFilterBar(events, this.activeCategory);
+    UI.renderList(events, Storage.getSortMode(), this.activeCategory);
   },
 
   /** Actualiza solo los números del countdown cada segundo, sin re-renderizar todo */
@@ -115,9 +128,12 @@ const App = {
       });
 
       // Update list countdowns (lightweight, only text)
+      const filteredEvents = this.activeCategory === 'all'
+        ? events
+        : events.filter((e) => (e.category || 'other') === this.activeCategory);
       const listItems = document.querySelectorAll('#event-list .event-list-item');
-      if (listItems.length === events.length) {
-        const sorted = UI.sortEvents(events, Storage.getSortMode());
+      if (listItems.length === filteredEvents.length) {
+        const sorted = UI.sortEvents(filteredEvents, Storage.getSortMode());
         listItems.forEach((li, i) => {
           const countEl = li.querySelector('.event-list-countdown');
           if (countEl && sorted[i]) countEl.textContent = Countdown.shortLabel(sorted[i]);
@@ -236,6 +252,7 @@ const App = {
     document.getElementById('event-time').value = '00:00';
     document.getElementById('event-emoji').value = '⏳';
     document.getElementById('event-color').value = COLOR_OPTIONS[0];
+    document.getElementById('event-category').value = DEFAULT_CATEGORY_ID;
     document.getElementById('event-notify-days').value = 0;
     document.getElementById('event-notify-hours').value = 0;
     document.getElementById('event-notify-minutes').value = 0;
@@ -247,6 +264,7 @@ const App = {
 
     UI.renderEmojiGrid('⏳');
     UI.renderColorGrid(COLOR_OPTIONS[0]);
+    UI.renderCategoryGrid(DEFAULT_CATEGORY_ID);
     this.updatePreview();
 
     UI.showView('view-form', 'right');
@@ -267,6 +285,7 @@ const App = {
     document.getElementById('event-time').value = event.time || '00:00';
     document.getElementById('event-emoji').value = event.emoji || '⏳';
     document.getElementById('event-color').value = event.color || COLOR_OPTIONS[0];
+    document.getElementById('event-category').value = event.category || DEFAULT_CATEGORY_ID;
     document.getElementById('event-recurring').checked = !!event.recurring;
 
     const notifySeconds = Number(event.notifyBefore) || 0;
@@ -276,6 +295,7 @@ const App = {
 
     UI.renderEmojiGrid(event.emoji);
     UI.renderColorGrid(event.color);
+    UI.renderCategoryGrid(event.category || DEFAULT_CATEGORY_ID);
     this.updatePreview();
 
     UI.showView('view-form', 'right');
@@ -290,6 +310,7 @@ const App = {
     const time = document.getElementById('event-time').value || '00:00';
     const emoji = document.getElementById('event-emoji').value || '⏳';
     const color = document.getElementById('event-color').value || COLOR_OPTIONS[0];
+    const category = document.getElementById('event-category').value || DEFAULT_CATEGORY_ID;
     const recurring = document.getElementById('event-recurring').checked;
 
     const notifyDays = Math.max(0, parseInt(document.getElementById('event-notify-days').value, 10) || 0);
@@ -321,6 +342,7 @@ const App = {
       time,
       emoji,
       color,
+      category,
       recurring,
       notifyBefore,
       _celebrated: existing ? existing._celebrated : false,
@@ -521,6 +543,7 @@ const App = {
       time: this.pendingImport.time,
       emoji: this.pendingImport.emoji,
       color: this.pendingImport.color,
+      category: this.pendingImport.category || DEFAULT_CATEGORY_ID,
       recurring: this.pendingImport.recurring,
       notifyBefore: null,
       _celebrated: false,

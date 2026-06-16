@@ -109,6 +109,7 @@ function encodeEventForShare(event) {
     time: event.time,
     emoji: event.emoji,
     color: event.color,
+    category: event.category,
     recurring: !!event.recurring,
   };
   const json = JSON.stringify(payload);
@@ -133,6 +134,7 @@ function decodeSharedEvent(encoded) {
       time: data.time || '00:00',
       emoji: data.emoji || '⏳',
       color: data.color || '#6c5ce7',
+      category: data.category || 'other',
       recurring: !!data.recurring,
     };
   } catch (e) {

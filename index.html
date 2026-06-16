@@ -51,6 +51,8 @@
         <button class="sort-chip" data-sort="created">Recién creados</button>
       </div>
 
+      <div class="category-filter-bar" id="category-filter-bar"></div>
+
       <ul id="event-list" class="event-list"></ul>
 
       <div id="list-empty-state" class="empty-state hidden">
@@ -98,6 +100,12 @@
           <label>Color de acento</label>
           <div class="color-grid" id="color-grid"></div>
           <input type="hidden" id="event-color" value="#6c5ce7" />
+        </div>
+
+        <div class="form-group">
+          <label>Categoría</label>
+          <div class="category-grid" id="category-grid"></div>
+          <input type="hidden" id="event-category" value="other" />
         </div>
 
         <div class="form-group checkbox-group">
