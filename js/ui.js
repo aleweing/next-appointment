@@ -162,7 +162,7 @@ const UI = {
     const elapsed = Date.now() - startTime;
     const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1);
 
-    const DISTANCE_THRESHOLD = width * 0.18;
+    const DISTANCE_THRESHOLD = width * 0.35;
     const VELOCITY_THRESHOLD = 0.35;
 
     let targetIndex = startIndex;
