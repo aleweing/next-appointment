@@ -137,8 +137,9 @@ body {
   padding: 8px 0 24px;
   flex: 1;
   min-height: 0;
-  touch-action: pan-y;
+  touch-action: pan-x;
   align-items: stretch;
+  -webkit-overflow-scrolling: touch;
 }
 
 .carousel::-webkit-scrollbar {
@@ -147,6 +148,7 @@ body {
 
 .event-card {
   scroll-snap-align: center;
+  scroll-snap-stop: always;
   min-width: 100%;
   flex-shrink: 0;
   background: var(--bg-card);
