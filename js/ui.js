@@ -108,109 +108,15 @@ const UI = {
       dotsContainer.appendChild(dot);
     });
 
-    // Sync dots with scroll position
+    // Sync dots with scroll position (el gesto de swipe lo gestiona
+    // el navegador de forma nativa vía scroll-snap en CSS; aquí solo
+    // escuchamos el scroll para mantener los puntos sincronizados)
     carousel.onscroll = () => {
       const index = Math.round(carousel.scrollLeft / carousel.clientWidth);
       [...dotsContainer.children].forEach((dot, i) => {
         dot.classList.toggle('active', i === index);
       });
     };
-
-    this.attachSwipeHandlers(carousel);
-  },
-
-  /**
-   * Añade gestos táctiles (swipe) al carrusel para una navegación
-   * fluida en móvil: basta un swipe corto o rápido para cambiar de card.
-   *
-   * Clave para que sea fluido: durante el arrastre, el scroll nativo del
-   * navegador se desactiva (preventDefault en touchmove) para que no
-   * compita con el scrollLeft que actualizamos manualmente. Si no se hace
-   * esto, ambos "tiran" del carrusel a la vez y el gesto se siente tembloroso
-   * o casi sin movimiento.
-   * @param {HTMLElement} carousel
-   */
-  attachSwipeHandlers(carousel) {
-    if (carousel._swipeAttached) return;
-    carousel._swipeAttached = true;
-
-    let startX = 0;
-    let startY = 0;
-    let startScroll = 0;
-    let startIndex = 0;
-    let startTime = 0;
-    let isDragging = false;
-    let isHorizontalSwipe = null; // null = aún no decidido, true/false una vez detectado
-
-    const getCardCount = () => carousel.children.length;
-
-    const goToIndex = (index) => {
-      const width = carousel.clientWidth;
-      const clamped = Math.max(0, Math.min(getCardCount() - 1, index));
-      carousel.scrollTo({ left: clamped * width, behavior: 'smooth' });
-    };
-
-    carousel.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      startScroll = carousel.scrollLeft;
-      startIndex = Math.round(carousel.scrollLeft / carousel.clientWidth);
-      startTime = Date.now();
-      isDragging = true;
-      isHorizontalSwipe = null;
-    }, { passive: true });
-
-    carousel.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - startX;
-      const deltaY = touch.clientY - startY;
-
-      // Decide una sola vez si el gesto es horizontal o vertical,
-      // para no robar el scroll vertical de la página por error.
-      if (isHorizontalSwipe === null) {
-        if (Math.abs(deltaX) < 6 && Math.abs(deltaY) < 6) return; // aún sin suficiente movimiento
-        isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
-        if (isHorizontalSwipe) {
-          carousel.style.scrollSnapType = 'none';
-        }
-      }
-
-      if (!isHorizontalSwipe) return; // dejar que la página haga scroll vertical normal
-
-      // Es un swipe horizontal: tomamos control total del scrollLeft
-      // y evitamos que el navegador también intente moverlo (causa el "tirón").
-      e.preventDefault();
-      carousel.scrollLeft = startScroll - deltaX;
-    }, { passive: false });
-
-    const finishGesture = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      carousel.style.scrollSnapType = 'x mandatory';
-
-      if (!isHorizontalSwipe) return; // fue un scroll vertical, no tocar el carrusel
-
-      const width = carousel.clientWidth;
-      const totalDelta = startScroll - carousel.scrollLeft; // positivo si arrastró hacia la izquierda
-      const elapsed = Date.now() - startTime;
-      const velocity = Math.abs(totalDelta) / Math.max(elapsed, 1); // px/ms
-
-      const DISTANCE_THRESHOLD = width * 0.15; // ~15% del ancho ya cambia de card
-      const VELOCITY_THRESHOLD = 0.3; // swipe rápido aunque sea corto
-
-      let targetIndex = startIndex;
-
-      if (Math.abs(totalDelta) > DISTANCE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
-        targetIndex = totalDelta > 0 ? startIndex + 1 : startIndex - 1;
-      }
-
-      goToIndex(targetIndex);
-    };
-
-    carousel.addEventListener('touchend', finishGesture);
-    carousel.addEventListener('touchcancel', finishGesture);
   },
 
   /**
