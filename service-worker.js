@@ -2,7 +2,7 @@
    Next Appointment — Service Worker
    ========================================= */
 
-const CACHE_NAME = 'next-appointment-v4'; /* Cambio 4/9 del roadmap de cambios */
+const CACHE_NAME = 'next-appointment-v9'; /* Cambio 4/9 del roadmap de cambios */
 
 const ASSETS_TO_CACHE = [
   './',
