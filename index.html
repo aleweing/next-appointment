@@ -26,9 +26,10 @@
       </div>
 
       <div id="empty-state" class="empty-state hidden">
-        <p class="empty-emoji">⏳</p>
-        <p>Todavía no tienes eventos.</p>
-        <button id="btn-empty-create" class="btn-primary">Crear mi primer evento</button>
+        <div class="empty-icon-circle" data-icon="hourglassEmpty"></div>
+        <p class="empty-title">Nada en el horizonte todavía</p>
+        <p class="empty-subtitle">Crea tu primera cuenta atrás: un viaje, un cumpleaños, lo que sea que estés esperando.</p>
+        <button id="btn-empty-create" class="btn-primary">Crear evento</button>
       </div>
 
       <div class="dots" id="carousel-dots"></div>
@@ -62,8 +63,10 @@
       <ul id="event-list" class="event-list"></ul>
 
       <div id="list-empty-state" class="empty-state hidden">
-        <p class="empty-emoji">📭</p>
-        <p>No hay eventos creados todavía.</p>
+        <div class="empty-icon-circle empty-icon-circle-muted" id="list-empty-icon" data-icon="hourglassEmpty"></div>
+        <p class="empty-title" id="list-empty-title">Nada en el horizonte todavía</p>
+        <p class="empty-subtitle" id="list-empty-subtitle">No hay eventos creados todavía.</p>
+        <button id="btn-list-empty-action" class="btn-secondary hidden">Ver todas las categorías</button>
       </div>
 
       <button id="btn-create-from-list" class="fab" aria-label="Crear evento" data-icon="plus"></button>

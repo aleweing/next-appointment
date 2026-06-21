@@ -347,6 +347,49 @@ const UI = {
    * @param {string} categoryFilter - 'all' o id de categoría
    * @param {string} searchQuery - texto de búsqueda por nombre
    */
+  /**
+   * Configura el icono, título, subtítulo y botón del estado vacío de la
+   * lista según el contexto: sin búsqueda con resultados, sin eventos en
+   * la categoría activa, o sin eventos en absoluto.
+   * @param {Array<Object>} allEvents - todos los eventos sin filtrar (para distinguir los casos)
+   * @param {string} categoryFilter
+   * @param {string} searchQuery
+   */
+  renderListEmptyVariant(allEvents, categoryFilter, searchQuery) {
+    const iconEl = document.getElementById('list-empty-icon');
+    const titleEl = document.getElementById('list-empty-title');
+    const subtitleEl = document.getElementById('list-empty-subtitle');
+    const actionBtn = document.getElementById('btn-list-empty-action');
+
+    const query = (searchQuery || '').trim();
+
+    if (query) {
+      // Caso: búsqueda sin resultados
+      setIcon(iconEl, 'searchOff');
+      iconEl.classList.add('empty-icon-circle-muted');
+      titleEl.textContent = 'Sin resultados';
+      subtitleEl.textContent = `Nada coincide con "${query}".`;
+      actionBtn.classList.add('hidden');
+    } else if (categoryFilter !== 'all') {
+      // Caso: categoría activa sin eventos
+      const category = getCategoryById(categoryFilter);
+      setIcon(iconEl, 'moodEmpty');
+      iconEl.classList.add('empty-icon-circle-muted');
+      titleEl.textContent = 'Nada por aquí';
+      subtitleEl.textContent = `No tienes eventos en "${category.label}" todavía.`;
+      actionBtn.textContent = 'Ver todas las categorías';
+      actionBtn.classList.remove('hidden');
+      actionBtn.onclick = () => App.setActiveCategory('all');
+    } else {
+      // Caso: sin eventos en absoluto
+      setIcon(iconEl, 'hourglassEmpty');
+      iconEl.classList.remove('empty-icon-circle-muted');
+      titleEl.textContent = 'Nada en el horizonte todavía';
+      subtitleEl.textContent = 'No hay eventos creados todavía.';
+      actionBtn.classList.add('hidden');
+    }
+  },
+
   renderList(events, sortMode = 'date-asc', categoryFilter = 'all', searchQuery = '') {
     const list = document.getElementById('event-list');
     const emptyState = document.getElementById('list-empty-state');
@@ -357,14 +400,7 @@ const UI = {
 
     if (!filtered.length) {
       emptyState.classList.remove('hidden');
-      const textEl = emptyState.querySelector('p:last-of-type');
-      if (searchQuery && searchQuery.trim()) {
-        textEl.textContent = `Nada coincide con "${searchQuery.trim()}".`;
-      } else if (categoryFilter !== 'all') {
-        textEl.textContent = 'No hay eventos en esta categoría.';
-      } else {
-        textEl.textContent = 'No hay eventos creados todavía.';
-      }
+      this.renderListEmptyVariant(events, categoryFilter, searchQuery);
       return;
     }
     emptyState.classList.add('hidden');

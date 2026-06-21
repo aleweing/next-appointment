@@ -167,38 +167,72 @@ const App = {
     this.refreshList();
   },
 
-  /** Actualiza solo los números del countdown cada segundo, sin re-renderizar todo */
+  /**
+   * Actualiza solo los números del countdown cada segundo, sin re-renderizar
+   * todo el DOM. Optimizado para no degradarse con muchos eventos:
+   * - Usa un Map para lookup O(1) en vez de Array.find() por cada card.
+   * - Solo toca el DOM de la vista que está realmente visible en pantalla.
+   * - En el carrusel, solo actualiza la card visible (scroll-snap solo
+   *   muestra una a la vez) en vez de las 50 que pudiera haber en el DOM.
+   * checkCelebrations/checkNotifications sí recorren todos los eventos
+   * siempre, porque deben dispararse aunque esa categoría no esté visible.
+   */
   startTicking() {
     if (this.tickInterval) clearInterval(this.tickInterval);
 
     this.tickInterval = setInterval(() => {
       const events = Storage.getAll();
-      const cards = document.querySelectorAll('#event-carousel .event-card');
+      const eventsById = new Map(events.map((e) => [e.id, e]));
 
-      cards.forEach((card) => {
-        const event = events.find((e) => e.id === card.dataset.id);
-        if (event) UI.updateCardCountdown(card, event);
-      });
+      const activeView = document.querySelector('.view.view-active');
+      const activeViewId = activeView ? activeView.id : null;
 
-      // Update list countdowns (lightweight, only text)
-      const filteredEvents = UI.filterEvents(events, this.activeCategory, this.searchQuery);
-      const listItems = document.querySelectorAll('#event-list .event-list-item');
-      if (listItems.length === filteredEvents.length) {
-        const sorted = UI.sortEvents(filteredEvents, Storage.getSortMode());
-        listItems.forEach((li, i) => {
-          const countEl = li.querySelector('.event-list-countdown');
-          if (countEl && sorted[i]) countEl.textContent = Countdown.shortLabel(sorted[i]);
-        });
-      }
-
-      // Update preview if form is open
-      if (document.getElementById('view-form').classList.contains('view-active')) {
+      if (activeViewId === 'view-main') {
+        this.updateVisibleCarouselCard(eventsById);
+      } else if (activeViewId === 'view-list') {
+        this.updateListCountdowns(events);
+      } else if (activeViewId === 'view-form') {
         this.updatePreview();
       }
 
       this.checkCelebrations(events);
       this.checkNotifications(events);
     }, 1000);
+  },
+
+  /**
+   * Actualiza el countdown solo de la card del carrusel actualmente
+   * visible en pantalla (scroll-snap solo muestra una a la vez), en vez
+   * de recorrer todas las cards del DOM aunque no se vean.
+   * @param {Map<string, Object>} eventsById
+   */
+  updateVisibleCarouselCard(eventsById) {
+    const carousel = document.getElementById('event-carousel');
+    if (!carousel || !carousel.children.length) return;
+
+    const index = Math.round(carousel.scrollLeft / carousel.clientWidth);
+    const visibleCard = carousel.children[index];
+    if (!visibleCard) return;
+
+    const event = eventsById.get(visibleCard.dataset.id);
+    if (event) UI.updateCardCountdown(visibleCard, event);
+  },
+
+  /**
+   * Actualiza los countdowns (texto corto) de la vista de lista, respetando
+   * el filtro de categoría y búsqueda activos.
+   * @param {Array<Object>} events
+   */
+  updateListCountdowns(events) {
+    const filteredEvents = UI.filterEvents(events, this.activeCategory, this.searchQuery);
+    const listItems = document.querySelectorAll('#event-list .event-list-item');
+    if (listItems.length !== filteredEvents.length) return;
+
+    const sorted = UI.sortEvents(filteredEvents, Storage.getSortMode());
+    listItems.forEach((li, i) => {
+      const countEl = li.querySelector('.event-list-countdown');
+      if (countEl && sorted[i]) countEl.textContent = Countdown.shortLabel(sorted[i]);
+    });
   },
 
   /** Comprueba si algún evento acaba de llegar a cero y muestra celebración */
