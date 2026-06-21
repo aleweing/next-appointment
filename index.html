@@ -109,14 +109,21 @@
         </div>
 
         <div class="form-group">
-          <label for="event-recurrence">Repetir</label>
-          <select id="event-recurrence">
-            <option value="none">No se repite</option>
-            <option value="daily">Cada día</option>
-            <option value="weekly">Cada semana</option>
-            <option value="monthly">Cada mes</option>
-            <option value="yearly">Cada año (cumpleaños, aniversarios...)</option>
-          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" id="event-repeat-toggle" />
+            Repetir este evento
+          </label>
+          <div class="repeat-row" id="repeat-row" hidden>
+            <span class="repeat-prefix">Cada</span>
+            <input type="number" id="event-recurrence-interval" min="1" max="999" value="1" inputmode="numeric" />
+            <select id="event-recurrence-unit">
+              <option value="day">día(s)</option>
+              <option value="week">semana(s)</option>
+              <option value="month">mes(es)</option>
+              <option value="year">año(s)</option>
+            </select>
+          </div>
+          <p class="form-hint" id="repeat-hint" hidden>Ej: cada 2 semanas, cada 3 días, cada 1 año (cumpleaños, aniversarios...).</p>
         </div>
 
         <div class="form-group">
