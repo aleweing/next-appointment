@@ -414,52 +414,6 @@ body {
   gap: 12px;
 }
 
-/* ===== Advanced fields toggle (modo rápido de creación) ===== */
-.advanced-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 10px 0;
-  cursor: pointer;
-}
-
-.advanced-toggle-icon {
-  font-size: 0.95rem;
-}
-
-.advanced-toggle-chevron {
-  font-size: 0.75rem;
-  transition: transform var(--transition);
-}
-
-.advanced-toggle[aria-expanded="true"] .advanced-toggle-chevron {
-  transform: rotate(180deg);
-}
-
-.advanced-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.advanced-fields[hidden] {
-  display: none;
-}
-
-.advanced-collapsed-hint {
-  text-align: center;
-}
-
-.advanced-collapsed-hint[hidden] {
-  display: none;
-}
-
 .form-row .form-group {
   flex: 1;
 }
@@ -500,48 +454,6 @@ select {
 
 input:focus, select:focus {
   outline: 2px solid var(--accent);
-}
-
-/* ===== Repeat row (cantidad + unidad, estilo alarma) ===== */
-.repeat-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.repeat-row[hidden] {
-  display: none;
-}
-
-.repeat-prefix {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.repeat-row input[type="number"] {
-  width: 64px;
-  flex-shrink: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 10px;
-  font-size: 1rem;
-  color: var(--text);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  -moz-appearance: textfield;
-}
-
-.repeat-row input[type="number"]::-webkit-outer-spin-button,
-.repeat-row input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.repeat-row select {
-  flex: 1;
 }
 
 .checkbox-group {
