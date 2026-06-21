@@ -818,6 +818,71 @@ input:focus, select:focus {
   to { transform: translateX(0); opacity: 1; }
 }
 
+/* ===== Search bar (list view) ===== */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.search-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-icon svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--text);
+  min-width: 0;
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 2px;
+}
+
+.search-clear svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.search-clear.hidden {
+  display: none;
+}
+
 /* ===== Sort bar (list view) ===== */
 .sort-bar {
   display: flex;

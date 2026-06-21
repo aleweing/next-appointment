@@ -317,26 +317,54 @@ const UI = {
   },
 
   /**
+   * Filtra eventos por categoría y/o texto de búsqueda (por nombre).
+   * Centraliza la lógica para que carrusel, lista y el tick en vivo
+   * apliquen siempre el mismo criterio.
+   * @param {Array<Object>} events
+   * @param {string} categoryFilter - 'all' o id de categoría
+   * @param {string} searchQuery - texto a buscar en el nombre (insensible a mayúsculas/acentos)
+   * @returns {Array<Object>}
+   */
+  filterEvents(events, categoryFilter = 'all', searchQuery = '') {
+    let result = categoryFilter === 'all'
+      ? events
+      : events.filter((e) => (e.category || DEFAULT_CATEGORY_ID) === categoryFilter);
+
+    const query = (searchQuery || '').trim().toLowerCase();
+    if (query) {
+      const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const normalizedQuery = normalize(query);
+      result = result.filter((e) => normalize(e.name || '').includes(normalizedQuery));
+    }
+
+    return result;
+  },
+
+  /**
    * Renderiza la lista completa de eventos (vista lista).
    * @param {Array<Object>} events
    * @param {string} sortMode - 'date-asc' | 'date-desc' | 'name' | 'created'
    * @param {string} categoryFilter - 'all' o id de categoría
+   * @param {string} searchQuery - texto de búsqueda por nombre
    */
-  renderList(events, sortMode = 'date-asc', categoryFilter = 'all') {
+  renderList(events, sortMode = 'date-asc', categoryFilter = 'all', searchQuery = '') {
     const list = document.getElementById('event-list');
     const emptyState = document.getElementById('list-empty-state');
 
     list.innerHTML = '';
 
-    const filtered = categoryFilter === 'all'
-      ? events
-      : events.filter((e) => (e.category || DEFAULT_CATEGORY_ID) === categoryFilter);
+    const filtered = this.filterEvents(events, categoryFilter, searchQuery);
 
     if (!filtered.length) {
       emptyState.classList.remove('hidden');
-      emptyState.querySelector('p:last-of-type').textContent = events.length
-        ? 'No hay eventos en esta categoría.'
-        : 'No hay eventos creados todavía.';
+      const textEl = emptyState.querySelector('p:last-of-type');
+      if (searchQuery && searchQuery.trim()) {
+        textEl.textContent = `Nada coincide con "${searchQuery.trim()}".`;
+      } else if (categoryFilter !== 'all') {
+        textEl.textContent = 'No hay eventos en esta categoría.';
+      } else {
+        textEl.textContent = 'No hay eventos creados todavía.';
+      }
       return;
     }
     emptyState.classList.add('hidden');

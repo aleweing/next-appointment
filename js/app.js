@@ -6,6 +6,7 @@ const App = {
   currentEditId: null,
   tickInterval: null,
   activeCategory: 'all',
+  searchQuery: '',
 
   init() {
     // Iconos: reemplaza todos los botones con data-icon por su SVG inline
@@ -50,8 +51,23 @@ const App = {
       chip.addEventListener('click', () => {
         Storage.setSortMode(chip.dataset.sort);
         UI.renderSortBar(chip.dataset.sort);
-        UI.renderList(Storage.getAll(), chip.dataset.sort, this.activeCategory);
+        this.refreshList();
       });
+    });
+
+    // Búsqueda en la lista (filtra en vivo)
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('input', () => {
+      this.searchQuery = searchInput.value;
+      document.getElementById('btn-clear-search').classList.toggle('hidden', !this.searchQuery);
+      this.refreshList();
+    });
+    document.getElementById('btn-clear-search').addEventListener('click', () => {
+      this.searchQuery = '';
+      searchInput.value = '';
+      document.getElementById('btn-clear-search').classList.add('hidden');
+      this.refreshList();
+      searchInput.focus();
     });
 
     // Form
@@ -119,10 +135,19 @@ const App = {
     const sortMode = Storage.getSortMode();
     UI.renderCarousel(events);
     UI.renderCategoryFilterBar(events, this.activeCategory);
-    UI.renderList(events, sortMode, this.activeCategory);
+    UI.renderList(events, sortMode, this.activeCategory, this.searchQuery);
     UI.renderSortBar(sortMode);
     this.checkCelebrations(events);
     this.checkNotifications(events);
+  },
+
+  /**
+   * Vuelve a renderizar solo la vista de lista, aplicando el filtro de
+   * categoría y la búsqueda activos. Usado cuando cambia la búsqueda o el orden.
+   */
+  refreshList() {
+    const events = Storage.getAll();
+    UI.renderList(events, Storage.getSortMode(), this.activeCategory, this.searchQuery);
   },
 
   /**
@@ -133,7 +158,7 @@ const App = {
     this.activeCategory = categoryId;
     const events = Storage.getAll();
     UI.renderCategoryFilterBar(events, this.activeCategory);
-    UI.renderList(events, Storage.getSortMode(), this.activeCategory);
+    this.refreshList();
   },
 
   /** Actualiza solo los números del countdown cada segundo, sin re-renderizar todo */
@@ -150,9 +175,7 @@ const App = {
       });
 
       // Update list countdowns (lightweight, only text)
-      const filteredEvents = this.activeCategory === 'all'
-        ? events
-        : events.filter((e) => (e.category || 'other') === this.activeCategory);
+      const filteredEvents = UI.filterEvents(events, this.activeCategory, this.searchQuery);
       const listItems = document.querySelectorAll('#event-list .event-list-item');
       if (listItems.length === filteredEvents.length) {
         const sorted = UI.sortEvents(filteredEvents, Storage.getSortMode());
