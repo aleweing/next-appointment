@@ -42,17 +42,27 @@ function getCategoryById(id) {
 }
 
 /**
- * Devuelve la etiqueta corta visible para un tipo de recurrencia.
- * @param {'none'|'daily'|'weekly'|'monthly'|'yearly'} recurrence
+ * Devuelve la etiqueta corta visible para una recurrencia { unit, interval }.
+ * Con interval 1 usa la forma simple ("Diario", "Anual"...), y con
+ * interval > 1 usa la forma "Cada N unidad(es)" (ej. "Cada 3 días").
+ * @param {{unit: 'none'|'day'|'week'|'month'|'year', interval: number}} recurrence
  */
 function recurrenceLabel(recurrence) {
-  switch (recurrence) {
-    case 'daily': return 'Diario';
-    case 'weekly': return 'Semanal';
-    case 'monthly': return 'Mensual';
-    case 'yearly': return 'Anual';
-    default: return '';
+  const { unit, interval } = recurrence;
+  if (!unit || unit === 'none') return '';
+
+  if (interval === 1) {
+    switch (unit) {
+      case 'day': return 'Diario';
+      case 'week': return 'Semanal';
+      case 'month': return 'Mensual';
+      case 'year': return 'Anual';
+      default: return '';
+    }
   }
+
+  const UNIT_PLURAL = { day: 'días', week: 'semanas', month: 'meses', year: 'años' };
+  return `Cada ${interval} ${UNIT_PLURAL[unit] || ''}`;
 }
 
 const UI = {
@@ -84,7 +94,7 @@ const UI = {
   applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     const btn = document.getElementById('btn-theme');
-    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (btn) setIcon(btn, theme === 'dark' ? 'sun' : 'moon');
   },
 
   /**
@@ -152,8 +162,15 @@ const UI = {
     categoryBadge.textContent = `${category.emoji} ${category.label}`;
     card.appendChild(categoryBadge);
 
+    if (event.isOnboardingExample) {
+      const exampleBadge = document.createElement('div');
+      exampleBadge.className = 'card-badge card-example-badge';
+      exampleBadge.textContent = 'Ejemplo';
+      card.appendChild(exampleBadge);
+    }
+
     const recurrence = Countdown.getRecurrence(event);
-    if (recurrence !== 'none') {
+    if (recurrence.unit !== 'none') {
       const badge = document.createElement('div');
       badge.className = 'card-badge';
       badge.textContent = `🔁 ${recurrenceLabel(recurrence)}`;
@@ -185,27 +202,36 @@ const UI = {
 
     const editBtn = document.createElement('button');
     editBtn.className = 'icon-btn';
-    editBtn.textContent = '✏️';
+    setIcon(editBtn, 'pencil');
     editBtn.setAttribute('aria-label', 'Editar');
     editBtn.onclick = () => App.openEditForm(event.id);
     actions.appendChild(editBtn);
 
     const shareBtn = document.createElement('button');
     shareBtn.className = 'icon-btn';
-    shareBtn.textContent = '📤';
+    setIcon(shareBtn, 'share');
     shareBtn.setAttribute('aria-label', 'Compartir');
     shareBtn.onclick = () => App.shareEvent(event.id);
     actions.appendChild(shareBtn);
 
     const notifyBtn = document.createElement('button');
     notifyBtn.className = 'icon-btn';
-    notifyBtn.textContent = event.notifyBefore ? '🔔' : '🔕';
+    setIcon(notifyBtn, event.notifyBefore ? 'bell' : 'bellOff');
     if (event.notifyBefore) notifyBtn.classList.add('notify-active');
     notifyBtn.setAttribute('aria-label', 'Aviso');
     notifyBtn.onclick = () => App.openEditForm(event.id);
     actions.appendChild(notifyBtn);
 
     card.appendChild(actions);
+
+    if (event.isOnboardingExample) {
+      const ownEventBtn = document.createElement('button');
+      ownEventBtn.type = 'button';
+      ownEventBtn.className = 'btn-primary card-own-event-btn';
+      ownEventBtn.textContent = 'Crear mi propio evento';
+      ownEventBtn.onclick = () => App.replaceOnboardingWithOwnEvent();
+      card.appendChild(ownEventBtn);
+    }
 
     this.updateCardCountdown(card, event);
 
@@ -332,13 +358,13 @@ const UI = {
 
       const name = document.createElement('div');
       name.className = 'event-list-name';
-      name.textContent = event.name;
+      name.textContent = event.isOnboardingExample ? `${event.name} (Ejemplo)` : event.name;
 
       const category = getCategoryById(event.category);
       const recurrence = Countdown.getRecurrence(event);
       const categoryTag = document.createElement('span');
       categoryTag.className = 'event-list-category';
-      categoryTag.textContent = recurrence !== 'none'
+      categoryTag.textContent = recurrence.unit !== 'none'
         ? `${category.emoji} ${category.label} · 🔁 ${recurrenceLabel(recurrence)}`
         : `${category.emoji} ${category.label}`;
 

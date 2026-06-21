@@ -2,13 +2,14 @@
    Next Appointment — Service Worker
    ========================================= */
 
-const CACHE_NAME = 'next-appointment-v8'; /* V.8 onboarding */
+const CACHE_NAME = 'next-appointment-v2';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/styles.css',
+  './js/icons.js',
   './js/storage.js',
   './js/countdown.js',
   './js/ui.js',

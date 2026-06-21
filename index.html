@@ -16,9 +16,9 @@
     <!-- ===================== MAIN VIEW ===================== -->
     <section id="view-main" class="view view-active">
       <header class="topbar">
-        <button id="btn-theme" class="icon-btn" aria-label="Cambiar tema">🌙</button>
+        <button id="btn-theme" class="icon-btn" aria-label="Cambiar tema" data-icon="moon"></button>
         <h1 class="logo">⏳ Next Appointment</h1>
-        <button id="btn-list" class="icon-btn" aria-label="Ver lista">📋</button>
+        <button id="btn-list" class="icon-btn" aria-label="Ver lista" data-icon="list"></button>
       </header>
 
       <div id="event-carousel" class="carousel">
@@ -33,15 +33,15 @@
 
       <div class="dots" id="carousel-dots"></div>
 
-      <button id="btn-create" class="fab" aria-label="Crear evento">＋</button>
+      <button id="btn-create" class="fab" aria-label="Crear evento" data-icon="plus"></button>
     </section>
 
     <!-- ===================== LIST VIEW ===================== -->
     <section id="view-list" class="view">
       <header class="topbar">
-        <button class="icon-btn back-btn" data-target="view-main" aria-label="Volver">←</button>
+        <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Volver" data-icon="arrowLeft"></button>
         <h1 class="logo">Mis eventos</h1>
-        <button id="btn-open-import" class="icon-btn" aria-label="Importar evento">📥</button>
+        <button id="btn-open-import" class="icon-btn" aria-label="Importar evento" data-icon="download"></button>
       </header>
 
       <div class="sort-bar" id="sort-bar">
@@ -60,15 +60,15 @@
         <p>No hay eventos creados todavía.</p>
       </div>
 
-      <button id="btn-create-from-list" class="fab" aria-label="Crear evento">＋</button>
+      <button id="btn-create-from-list" class="fab" aria-label="Crear evento" data-icon="plus"></button>
     </section>
 
     <!-- ===================== CREATE/EDIT VIEW ===================== -->
     <section id="view-form" class="view">
       <header class="topbar">
-        <button class="icon-btn back-btn" data-target="view-main" aria-label="Cancelar">←</button>
+        <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Cancelar" data-icon="arrowLeft"></button>
         <h1 class="logo" id="form-title">Nuevo evento</h1>
-        <button id="btn-delete-event" class="icon-btn hidden" aria-label="Eliminar">🗑️</button>
+        <button id="btn-delete-event" class="icon-btn hidden" aria-label="Eliminar" data-icon="trash"></button>
       </header>
 
       <form id="event-form" class="event-form">
@@ -218,7 +218,7 @@
   <div id="modal-share" class="modal-overlay hidden">
     <div class="modal-card">
       <h2>Compartir evento</h2>
-      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista. Si la otra persona tiene la app instalada en iPhone, el enlace puede abrirse en Safari en vez de en la app: puede copiarlo y pegarlo en "Importar evento" (📥) dentro de la app para tenerlo ahí también.</p>
+      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista. Si la otra persona tiene la app instalada en iPhone, el enlace puede abrirse en Safari en vez de en la app: puede copiarlo y pegarlo en "Importar evento" dentro de la app para tenerlo ahí también.</p>
       <div class="share-link-row">
         <input type="text" id="share-link-input" readonly />
         <button id="btn-copy-link" class="btn-primary">Copiar</button>
@@ -230,6 +230,7 @@
     </div>
   </div>
 
+  <script src="js/icons.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/countdown.js"></script>
   <script src="js/ui.js"></script>
