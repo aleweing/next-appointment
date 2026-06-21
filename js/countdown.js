@@ -4,6 +4,17 @@
 
 const Countdown = {
   /**
+   * Normaliza el campo de recurrencia de un evento, con retrocompatibilidad:
+   * eventos antiguos solo tenían `recurring: true/false` (equivalente a 'yearly').
+   * @param {Object} event
+   * @returns {'none'|'daily'|'weekly'|'monthly'|'yearly'}
+   */
+  getRecurrence(event) {
+    if (event.recurrence) return event.recurrence;
+    return event.recurring ? 'yearly' : 'none';
+  },
+
+  /**
    * Calcula la fecha objetivo de un evento, ajustando
    * a la próxima ocurrencia si es recurrente y ya pasó.
    * @param {Object} event
@@ -11,16 +22,44 @@ const Countdown = {
    */
   getTargetDate(event) {
     let target = new Date(`${event.date}T${event.time || '00:00'}:00`);
+    const recurrence = this.getRecurrence(event);
 
-    if (event.recurring) {
+    if (recurrence !== 'none') {
       const now = new Date();
-      while (target.getTime() <= now.getTime()) {
-        target = new Date(target);
-        target.setFullYear(target.getFullYear() + 1);
+      let guard = 0; // evita bucles infinitos ante fechas corruptas
+      while (target.getTime() <= now.getTime() && guard < 100000) {
+        target = this.advanceByRecurrence(target, recurrence);
+        guard++;
       }
     }
 
     return target;
+  },
+
+  /**
+   * Avanza una fecha una "unidad" según el tipo de recurrencia.
+   * @param {Date} date
+   * @param {'daily'|'weekly'|'monthly'|'yearly'} recurrence
+   * @returns {Date}
+   */
+  advanceByRecurrence(date, recurrence) {
+    const next = new Date(date);
+    switch (recurrence) {
+      case 'daily':
+        next.setDate(next.getDate() + 1);
+        break;
+      case 'weekly':
+        next.setDate(next.getDate() + 7);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + 1);
+        break;
+      case 'yearly':
+      default:
+        next.setFullYear(next.getFullYear() + 1);
+        break;
+    }
+    return next;
   },
 
   /**
@@ -54,7 +93,7 @@ const Countdown = {
    * @param {Object} event
    */
   hasElapsed(event) {
-    if (event.recurring) return false;
+    if (this.getRecurrence(event) !== 'none') return false;
     return this.diffMs(event) <= 0;
   },
 

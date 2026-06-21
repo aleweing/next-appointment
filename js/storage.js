@@ -110,7 +110,7 @@ function encodeEventForShare(event) {
     emoji: event.emoji,
     color: event.color,
     category: event.category,
-    recurring: !!event.recurring,
+    recurrence: event.recurrence || (event.recurring ? 'yearly' : 'none'),
   };
   const json = JSON.stringify(payload);
   const base64 = btoa(unescape(encodeURIComponent(json)));
@@ -128,6 +128,8 @@ function decodeSharedEvent(encoded) {
     const json = decodeURIComponent(escape(atob(encoded)));
     const data = JSON.parse(json);
     if (!data.name || !data.date) return null;
+    const VALID_RECURRENCES = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
+    const recurrence = data.recurrence || (data.recurring ? 'yearly' : 'none');
     return {
       name: String(data.name).slice(0, 40),
       date: data.date,
@@ -135,7 +137,7 @@ function decodeSharedEvent(encoded) {
       emoji: data.emoji || '⏳',
       color: data.color || '#6c5ce7',
       category: data.category || 'other',
-      recurring: !!data.recurring,
+      recurrence: VALID_RECURRENCES.includes(recurrence) ? recurrence : 'none',
     };
   } catch (e) {
     return null;

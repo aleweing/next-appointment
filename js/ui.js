@@ -41,6 +41,20 @@ function getCategoryById(id) {
   return CATEGORIES.find((c) => c.id === id) || CATEGORIES.find((c) => c.id === DEFAULT_CATEGORY_ID);
 }
 
+/**
+ * Devuelve la etiqueta corta visible para un tipo de recurrencia.
+ * @param {'none'|'daily'|'weekly'|'monthly'|'yearly'} recurrence
+ */
+function recurrenceLabel(recurrence) {
+  switch (recurrence) {
+    case 'daily': return 'Diario';
+    case 'weekly': return 'Semanal';
+    case 'monthly': return 'Mensual';
+    case 'yearly': return 'Anual';
+    default: return '';
+  }
+}
+
 const UI = {
   /**
    * Cambia la vista activa, con una transición de slide.
@@ -138,10 +152,11 @@ const UI = {
     categoryBadge.textContent = `${category.emoji} ${category.label}`;
     card.appendChild(categoryBadge);
 
-    if (event.recurring) {
+    const recurrence = Countdown.getRecurrence(event);
+    if (recurrence !== 'none') {
       const badge = document.createElement('div');
       badge.className = 'card-badge';
-      badge.textContent = '🔁 Anual';
+      badge.textContent = `🔁 ${recurrenceLabel(recurrence)}`;
       card.appendChild(badge);
     }
 
@@ -320,9 +335,12 @@ const UI = {
       name.textContent = event.name;
 
       const category = getCategoryById(event.category);
+      const recurrence = Countdown.getRecurrence(event);
       const categoryTag = document.createElement('span');
       categoryTag.className = 'event-list-category';
-      categoryTag.textContent = `${category.emoji} ${category.label}`;
+      categoryTag.textContent = recurrence !== 'none'
+        ? `${category.emoji} ${category.label} · 🔁 ${recurrenceLabel(recurrence)}`
+        : `${category.emoji} ${category.label}`;
 
       const date = document.createElement('div');
       date.className = 'event-list-date';
