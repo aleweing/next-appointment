@@ -414,6 +414,52 @@ body {
   gap: 12px;
 }
 
+/* ===== Advanced fields toggle (modo rápido de creación) ===== */
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.advanced-toggle-icon {
+  font-size: 0.95rem;
+}
+
+.advanced-toggle-chevron {
+  font-size: 0.75rem;
+  transition: transform var(--transition);
+}
+
+.advanced-toggle[aria-expanded="true"] .advanced-toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.advanced-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.advanced-fields[hidden] {
+  display: none;
+}
+
+.advanced-collapsed-hint {
+  text-align: center;
+}
+
+.advanced-collapsed-hint[hidden] {
+  display: none;
+}
+
 .form-row .form-group {
   flex: 1;
 }
