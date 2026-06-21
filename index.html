@@ -108,11 +108,15 @@
           <input type="hidden" id="event-category" value="other" />
         </div>
 
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="event-recurring" />
-            Repetir cada año (cumpleaños, aniversarios...)
-          </label>
+        <div class="form-group">
+          <label for="event-recurrence">Repetir</label>
+          <select id="event-recurrence">
+            <option value="none">No se repite</option>
+            <option value="daily">Cada día</option>
+            <option value="weekly">Cada semana</option>
+            <option value="monthly">Cada mes</option>
+            <option value="yearly">Cada año (cumpleaños, aniversarios...)</option>
+          </select>
         </div>
 
         <div class="form-group">
