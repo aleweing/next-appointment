@@ -5,6 +5,7 @@
 const STORAGE_KEY = 'next-appointment:events';
 const THEME_KEY = 'next-appointment:theme';
 const SORT_KEY = 'next-appointment:sort';
+const ONBOARDING_KEY = 'next-appointment:onboarding-seen';
 
 const Storage = {
   /**
@@ -87,6 +88,19 @@ const Storage = {
   setSortMode(mode) {
     localStorage.setItem(SORT_KEY, mode);
   },
+
+  /**
+   * Indica si ya se mostró el evento de ejemplo de onboarding alguna vez.
+   * Una vez visto (creado, editado a propio, o borrado por el usuario),
+   * nunca debe volver a generarse, aunque la persona se quede sin eventos.
+   */
+  hasSeenOnboarding() {
+    return localStorage.getItem(ONBOARDING_KEY) === 'true';
+  },
+
+  markOnboardingSeen() {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+  },
 };
 
 /**
@@ -103,6 +117,7 @@ function generateId() {
  * @returns {string}
  */
 function encodeEventForShare(event) {
+  const { unit, interval } = Countdown.getRecurrence(event);
   const payload = {
     name: event.name,
     date: event.date,
@@ -110,7 +125,8 @@ function encodeEventForShare(event) {
     emoji: event.emoji,
     color: event.color,
     category: event.category,
-    recurrence: event.recurrence || (event.recurring ? 'yearly' : 'none'),
+    recurrenceUnit: unit,
+    recurrenceInterval: interval,
   };
   const json = JSON.stringify(payload);
   const base64 = btoa(unescape(encodeURIComponent(json)));
@@ -128,8 +144,12 @@ function decodeSharedEvent(encoded) {
     const json = decodeURIComponent(escape(atob(encoded)));
     const data = JSON.parse(json);
     if (!data.name || !data.date) return null;
-    const VALID_RECURRENCES = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
-    const recurrence = data.recurrence || (data.recurring ? 'yearly' : 'none');
+
+    const VALID_UNITS = ['none', 'day', 'week', 'month', 'year'];
+    // Soporta el código compartido más reciente (recurrenceUnit/Interval) y,
+    // por compatibilidad, enlaces antiguos generados con 'recurrence' o 'recurring'.
+    const { unit, interval } = Countdown.getRecurrence(data);
+
     return {
       name: String(data.name).slice(0, 40),
       date: data.date,
@@ -137,7 +157,8 @@ function decodeSharedEvent(encoded) {
       emoji: data.emoji || '⏳',
       color: data.color || '#6c5ce7',
       category: data.category || 'other',
-      recurrence: VALID_RECURRENCES.includes(recurrence) ? recurrence : 'none',
+      recurrenceUnit: VALID_UNITS.includes(unit) ? unit : 'none',
+      recurrenceInterval: Math.max(1, interval || 1),
     };
   } catch (e) {
     return null;
