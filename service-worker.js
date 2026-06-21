@@ -2,8 +2,7 @@
    Next Appointment — Service Worker
    ========================================= */
 
-const CACHE_NAME = 'next-appointment-v9'; /* Cambio 4/9 del roadmap de cambios */
-
+const CACHE_NAME = 'next-appointment-v10'; /* FIX del R4 */
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -40,17 +39,39 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: cache-first con fallback a red
+// Fetch: network-first para HTML/CSS/JS (evita servir versiones desincronizadas
+// entre archivos tras una actualización), cache-first para imágenes (no cambian).
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+  const isCodeAsset = /\.(html|js|css)$/.test(url.pathname) || url.pathname.endsWith('/');
+
+  if (isCodeAsset) {
+    // Network-first: intenta red, y si responde, actualiza la caché.
+    // Si no hay red, cae al último HTML/JS/CSS cacheado.
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Cache-first para el resto (iconos, imágenes): no cambian a menudo,
+  // priorizar velocidad y uso offline.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
 
       return fetch(event.request)
         .then((response) => {
-          // Guardar copia en cache para próximas veces
           if (response && response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {

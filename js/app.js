@@ -9,10 +9,16 @@ const App = {
   searchQuery: '',
 
   init() {
-    // Iconos: reemplaza todos los botones con data-icon por su SVG inline
-    document.querySelectorAll('[data-icon]').forEach((el) => {
-      setIcon(el, el.dataset.icon);
-    });
+    // Iconos: reemplaza todos los botones con data-icon por su SVG inline.
+    // Envuelto en try/catch: si esto fallara (ej. caché desincronizada tras
+    // una actualización), no debe impedir que el resto de la app arranque.
+    try {
+      document.querySelectorAll('[data-icon]').forEach((el) => {
+        if (typeof setIcon === 'function') setIcon(el, el.dataset.icon);
+      });
+    } catch (e) {
+      console.warn('No se pudieron inicializar los iconos', e);
+    }
 
     // Theme
     const savedTheme = Storage.getTheme();

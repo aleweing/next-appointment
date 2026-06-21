@@ -41,10 +41,19 @@ const Icons = {
 
 /**
  * Inserta un icono dentro de un elemento, reemplazando su contenido.
+ * Defensivo: si por algún motivo el set de iconos no estuviera disponible
+ * (ej. caché desincronizada de una actualización a medias), no debe romper
+ * el resto de la app — simplemente deja el botón sin icono visual.
  * @param {HTMLElement} el
  * @param {string} iconName - clave de Icons
  */
 function setIcon(el, iconName) {
-  el.innerHTML = Icons[iconName] || '';
-  el.classList.add('icon-svg-wrap');
+  try {
+    if (!el) return;
+    const svg = (typeof Icons !== 'undefined' && Icons[iconName]) || '';
+    el.innerHTML = svg;
+    el.classList.add('icon-svg-wrap');
+  } catch (e) {
+    console.warn('No se pudo aplicar el icono', iconName, e);
+  }
 }
