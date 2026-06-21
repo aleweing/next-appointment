@@ -54,7 +54,14 @@ const App = {
     ['event-name', 'event-date', 'event-time'].forEach((id) => {
       document.getElementById(id).addEventListener('input', () => this.updatePreview());
     });
-    document.getElementById('event-recurrence').addEventListener('change', () => this.updatePreview());
+
+    // Repeat toggle (cantidad + unidad, estilo alarma)
+    document.getElementById('event-repeat-toggle').addEventListener('change', (e) => {
+      this.toggleRepeatRow(e.target.checked);
+      this.updatePreview();
+    });
+    document.getElementById('event-recurrence-interval').addEventListener('input', () => this.updatePreview());
+    document.getElementById('event-recurrence-unit').addEventListener('change', () => this.updatePreview());
 
     // Share modal
     document.getElementById('btn-copy-link').addEventListener('click', () => this.copyShareLink());
@@ -154,7 +161,7 @@ const App = {
   /** Comprueba si algún evento acaba de llegar a cero y muestra celebración */
   checkCelebrations(events) {
     events.forEach((event) => {
-      if (Countdown.getRecurrence(event) !== 'none') return;
+      if (Countdown.getRecurrence(event).unit !== 'none') return;
       const diff = Countdown.diffMs(event);
       // Si el evento "acaba de" llegar (margen de 2s) y no se ha celebrado ya
       if (diff <= 0 && diff > -2000 && !event._celebrated) {
@@ -254,7 +261,10 @@ const App = {
     document.getElementById('event-emoji').value = '⏳';
     document.getElementById('event-color').value = COLOR_OPTIONS[0];
     document.getElementById('event-category').value = DEFAULT_CATEGORY_ID;
-    document.getElementById('event-recurrence').value = 'none';
+    document.getElementById('event-repeat-toggle').checked = false;
+    document.getElementById('event-recurrence-interval').value = 1;
+    document.getElementById('event-recurrence-unit').value = 'year';
+    this.toggleRepeatRow(false);
     document.getElementById('event-notify-days').value = 0;
     document.getElementById('event-notify-hours').value = 0;
     document.getElementById('event-notify-minutes').value = 0;
@@ -288,7 +298,13 @@ const App = {
     document.getElementById('event-emoji').value = event.emoji || '⏳';
     document.getElementById('event-color').value = event.color || COLOR_OPTIONS[0];
     document.getElementById('event-category').value = event.category || DEFAULT_CATEGORY_ID;
-    document.getElementById('event-recurrence').value = Countdown.getRecurrence(event);
+
+    const { unit, interval } = Countdown.getRecurrence(event);
+    const repeats = unit !== 'none';
+    document.getElementById('event-repeat-toggle').checked = repeats;
+    document.getElementById('event-recurrence-interval').value = interval;
+    document.getElementById('event-recurrence-unit').value = repeats ? unit : 'year';
+    this.toggleRepeatRow(repeats);
 
     const notifySeconds = Number(event.notifyBefore) || 0;
     document.getElementById('event-notify-days').value = Math.floor(notifySeconds / 86400);
@@ -313,7 +329,12 @@ const App = {
     const emoji = document.getElementById('event-emoji').value || '⏳';
     const color = document.getElementById('event-color').value || COLOR_OPTIONS[0];
     const category = document.getElementById('event-category').value || DEFAULT_CATEGORY_ID;
-    const recurrence = document.getElementById('event-recurrence').value || 'none';
+
+    const repeats = document.getElementById('event-repeat-toggle').checked;
+    const recurrenceUnit = repeats ? document.getElementById('event-recurrence-unit').value : 'none';
+    const recurrenceInterval = repeats
+      ? Math.max(1, parseInt(document.getElementById('event-recurrence-interval').value, 10) || 1)
+      : 1;
 
     const notifyDays = Math.max(0, parseInt(document.getElementById('event-notify-days').value, 10) || 0);
     const notifyHours = Math.max(0, parseInt(document.getElementById('event-notify-hours').value, 10) || 0);
@@ -333,9 +354,11 @@ const App = {
       }
     }
 
-    // Si cambia la fecha/hora o el valor de aviso, reseteamos la marca de "ya notificado"
+    // Si cambia la fecha/hora o la repetición, reseteamos la marca de "ya notificado"
+    const existingRecurrence = existing ? Countdown.getRecurrence(existing) : null;
     const targetChanged = !existing || existing.date !== date || existing.time !== time
-      || Countdown.getRecurrence(existing) !== recurrence || existing.notifyBefore !== notifyBefore;
+      || existingRecurrence.unit !== recurrenceUnit || existingRecurrence.interval !== recurrenceInterval
+      || existing.notifyBefore !== notifyBefore;
 
     const event = {
       id: this.currentEditId || generateId(),
@@ -345,7 +368,8 @@ const App = {
       emoji,
       color,
       category,
-      recurrence,
+      recurrenceUnit,
+      recurrenceInterval,
       notifyBefore,
       _celebrated: existing ? existing._celebrated : false,
       _notifiedKey: targetChanged ? null : (existing ? existing._notifiedKey : null),
@@ -367,6 +391,12 @@ const App = {
     UI.showView('view-main', 'left');
   },
 
+  /** Muestra u oculta el bloque de cantidad+unidad de repetición */
+  toggleRepeatRow(show) {
+    document.getElementById('repeat-row').hidden = !show;
+    document.getElementById('repeat-hint').hidden = !show;
+  },
+
   /** Actualiza la card de vista previa del formulario */
   updatePreview() {
     const name = document.getElementById('event-name').value.trim() || 'Nombre del evento';
@@ -374,7 +404,11 @@ const App = {
     const time = document.getElementById('event-time').value || '00:00';
     const emoji = document.getElementById('event-emoji').value || '⏳';
     const color = document.getElementById('event-color').value || COLOR_OPTIONS[0];
-    const recurrence = document.getElementById('event-recurrence')?.value || 'none';
+    const repeats = document.getElementById('event-repeat-toggle')?.checked || false;
+    const recurrenceUnit = repeats ? (document.getElementById('event-recurrence-unit')?.value || 'year') : 'none';
+    const recurrenceInterval = repeats
+      ? Math.max(1, parseInt(document.getElementById('event-recurrence-interval')?.value, 10) || 1)
+      : 1;
 
     document.getElementById('preview-emoji').textContent = emoji;
     document.getElementById('preview-name').textContent = name;
@@ -386,7 +420,7 @@ const App = {
       return;
     }
 
-    const tempEvent = { date, time, recurrence };
+    const tempEvent = { date, time, recurrenceUnit, recurrenceInterval };
     document.getElementById('preview-date').textContent = Countdown.formatDate(tempEvent);
 
     if (Countdown.hasElapsed(tempEvent)) {
@@ -546,7 +580,8 @@ const App = {
       emoji: this.pendingImport.emoji,
       color: this.pendingImport.color,
       category: this.pendingImport.category || DEFAULT_CATEGORY_ID,
-      recurrence: this.pendingImport.recurrence || 'none',
+      recurrenceUnit: this.pendingImport.recurrenceUnit || 'none',
+      recurrenceInterval: this.pendingImport.recurrenceInterval || 1,
       notifyBefore: null,
       _celebrated: false,
       _notifiedKey: null,

@@ -42,17 +42,27 @@ function getCategoryById(id) {
 }
 
 /**
- * Devuelve la etiqueta corta visible para un tipo de recurrencia.
- * @param {'none'|'daily'|'weekly'|'monthly'|'yearly'} recurrence
+ * Devuelve la etiqueta corta visible para una recurrencia { unit, interval }.
+ * Con interval 1 usa la forma simple ("Diario", "Anual"...), y con
+ * interval > 1 usa la forma "Cada N unidad(es)" (ej. "Cada 3 días").
+ * @param {{unit: 'none'|'day'|'week'|'month'|'year', interval: number}} recurrence
  */
 function recurrenceLabel(recurrence) {
-  switch (recurrence) {
-    case 'daily': return 'Diario';
-    case 'weekly': return 'Semanal';
-    case 'monthly': return 'Mensual';
-    case 'yearly': return 'Anual';
-    default: return '';
+  const { unit, interval } = recurrence;
+  if (!unit || unit === 'none') return '';
+
+  if (interval === 1) {
+    switch (unit) {
+      case 'day': return 'Diario';
+      case 'week': return 'Semanal';
+      case 'month': return 'Mensual';
+      case 'year': return 'Anual';
+      default: return '';
+    }
   }
+
+  const UNIT_PLURAL = { day: 'días', week: 'semanas', month: 'meses', year: 'años' };
+  return `Cada ${interval} ${UNIT_PLURAL[unit] || ''}`;
 }
 
 const UI = {
@@ -153,7 +163,7 @@ const UI = {
     card.appendChild(categoryBadge);
 
     const recurrence = Countdown.getRecurrence(event);
-    if (recurrence !== 'none') {
+    if (recurrence.unit !== 'none') {
       const badge = document.createElement('div');
       badge.className = 'card-badge';
       badge.textContent = `🔁 ${recurrenceLabel(recurrence)}`;
@@ -338,7 +348,7 @@ const UI = {
       const recurrence = Countdown.getRecurrence(event);
       const categoryTag = document.createElement('span');
       categoryTag.className = 'event-list-category';
-      categoryTag.textContent = recurrence !== 'none'
+      categoryTag.textContent = recurrence.unit !== 'none'
         ? `${category.emoji} ${category.label} · 🔁 ${recurrenceLabel(recurrence)}`
         : `${category.emoji} ${category.label}`;
 

@@ -4,14 +4,27 @@
 
 const Countdown = {
   /**
-   * Normaliza el campo de recurrencia de un evento, con retrocompatibilidad:
-   * eventos antiguos solo tenían `recurring: true/false` (equivalente a 'yearly').
+   * Normaliza la recurrencia de un evento a { unit, interval }, con
+   * retrocompatibilidad con los dos formatos anteriores:
+   * - `recurring: true/false` (formato más antiguo, equivalía a anual)
+   * - `recurrence: 'yearly'` (formato intermedio, sin cantidad configurable)
    * @param {Object} event
-   * @returns {'none'|'daily'|'weekly'|'monthly'|'yearly'}
+   * @returns {{unit: 'none'|'day'|'week'|'month'|'year', interval: number}}
    */
   getRecurrence(event) {
-    if (event.recurrence) return event.recurrence;
-    return event.recurring ? 'yearly' : 'none';
+    if (event.recurrenceUnit) {
+      return {
+        unit: event.recurrenceUnit,
+        interval: Math.max(1, parseInt(event.recurrenceInterval, 10) || 1),
+      };
+    }
+    // Formato intermedio: 'daily'|'weekly'|'monthly'|'yearly'|'none'
+    if (event.recurrence) {
+      const LEGACY_MAP = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year', none: 'none' };
+      return { unit: LEGACY_MAP[event.recurrence] || 'none', interval: 1 };
+    }
+    // Formato más antiguo: checkbox booleano
+    return { unit: event.recurring ? 'year' : 'none', interval: 1 };
   },
 
   /**
@@ -22,13 +35,13 @@ const Countdown = {
    */
   getTargetDate(event) {
     let target = new Date(`${event.date}T${event.time || '00:00'}:00`);
-    const recurrence = this.getRecurrence(event);
+    const { unit, interval } = this.getRecurrence(event);
 
-    if (recurrence !== 'none') {
+    if (unit !== 'none') {
       const now = new Date();
       let guard = 0; // evita bucles infinitos ante fechas corruptas
       while (target.getTime() <= now.getTime() && guard < 100000) {
-        target = this.advanceByRecurrence(target, recurrence);
+        target = this.advanceByRecurrence(target, unit, interval);
         guard++;
       }
     }
@@ -37,26 +50,28 @@ const Countdown = {
   },
 
   /**
-   * Avanza una fecha una "unidad" según el tipo de recurrencia.
+   * Avanza una fecha una "unidad x cantidad" según el tipo de recurrencia.
    * @param {Date} date
-   * @param {'daily'|'weekly'|'monthly'|'yearly'} recurrence
+   * @param {'day'|'week'|'month'|'year'} unit
+   * @param {number} interval - cuántas unidades avanzar (ej. 3 días, 2 semanas)
    * @returns {Date}
    */
-  advanceByRecurrence(date, recurrence) {
+  advanceByRecurrence(date, unit, interval = 1) {
     const next = new Date(date);
-    switch (recurrence) {
-      case 'daily':
-        next.setDate(next.getDate() + 1);
+    switch (unit) {
+      case 'day':
+        next.setDate(next.getDate() + interval);
         break;
-      case 'weekly':
-        next.setDate(next.getDate() + 7);
+      case 'week':
+        next.setDate(next.getDate() + interval * 7);
         break;
-      case 'monthly':
-        next.setMonth(next.getMonth() + 1);
+      case 'month':
+        next.setMonth(next.getMonth() + interval);
         break;
-      case 'yearly':
+      case 'year':
+        next.setFullYear(next.getFullYear() + interval);
+        break;
       default:
-        next.setFullYear(next.getFullYear() + 1);
         break;
     }
     return next;
@@ -93,7 +108,7 @@ const Countdown = {
    * @param {Object} event
    */
   hasElapsed(event) {
-    if (this.getRecurrence(event) !== 'none') return false;
+    if (this.getRecurrence(event).unit !== 'none') return false;
     return this.diffMs(event) <= 0;
   },
 
