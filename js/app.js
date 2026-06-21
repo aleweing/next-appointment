@@ -55,6 +55,12 @@ const App = {
       document.getElementById(id).addEventListener('input', () => this.updatePreview());
     });
 
+    // Modo rápido: mostrar/ocultar campos avanzados
+    document.getElementById('btn-toggle-advanced').addEventListener('click', () => {
+      const isExpanded = document.getElementById('btn-toggle-advanced').getAttribute('aria-expanded') === 'true';
+      this.toggleAdvancedFields(!isExpanded);
+    });
+
     // Repeat toggle (cantidad + unidad, estilo alarma)
     document.getElementById('event-repeat-toggle').addEventListener('change', (e) => {
       this.toggleRepeatRow(e.target.checked);
@@ -277,6 +283,7 @@ const App = {
     UI.renderEmojiGrid('⏳');
     UI.renderColorGrid(COLOR_OPTIONS[0]);
     UI.renderCategoryGrid(DEFAULT_CATEGORY_ID);
+    this.toggleAdvancedFields(false);
     this.updatePreview();
 
     UI.showView('view-form', 'right');
@@ -314,6 +321,16 @@ const App = {
     UI.renderEmojiGrid(event.emoji);
     UI.renderColorGrid(event.color);
     UI.renderCategoryGrid(event.category || DEFAULT_CATEGORY_ID);
+
+    // Si el evento ya tiene algo configurado fuera de los valores por
+    // defecto, expandimos las opciones avanzadas para que no quede oculto.
+    const hasNonDefaultOptions = (event.emoji && event.emoji !== '⏳')
+      || (event.color && event.color !== COLOR_OPTIONS[0])
+      || (event.category && event.category !== DEFAULT_CATEGORY_ID)
+      || repeats
+      || notifySeconds > 0;
+    this.toggleAdvancedFields(hasNonDefaultOptions);
+
     this.updatePreview();
 
     UI.showView('view-form', 'right');
@@ -395,6 +412,21 @@ const App = {
   toggleRepeatRow(show) {
     document.getElementById('repeat-row').hidden = !show;
     document.getElementById('repeat-hint').hidden = !show;
+  },
+
+  /**
+   * Muestra u oculta el bloque de campos avanzados (icono, color,
+   * categoría, repetir, aviso) del modo rápido de creación.
+   * @param {boolean} show
+   */
+  toggleAdvancedFields(show) {
+    document.getElementById('advanced-fields').hidden = !show;
+    document.getElementById('advanced-collapsed-hint').hidden = show;
+    const btn = document.getElementById('btn-toggle-advanced');
+    btn.setAttribute('aria-expanded', String(show));
+    document.getElementById('advanced-toggle-label').textContent = show
+      ? 'Ocultar opciones'
+      : 'Más opciones (icono, color, categoría...)';
   },
 
   /** Actualiza la card de vista previa del formulario */
