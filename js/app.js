@@ -228,8 +228,8 @@ const App = {
         this.updatePreview();
       }
 
-      this.checkCelebrations(events);
-      this.checkNotifications(events);
+      this.checkCelebrations(allEvents);
+      this.checkNotifications(allEvents);
     }, 1000);
   },
 
