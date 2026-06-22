@@ -42,7 +42,10 @@
       <header class="topbar">
         <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Volver" data-icon="arrowLeft"></button>
         <h1 class="logo">Mis eventos</h1>
-        <button id="btn-open-import" class="icon-btn" aria-label="Importar evento" data-icon="download"></button>
+        <div class="topbar-actions">
+          <button id="btn-open-archived" class="icon-btn" aria-label="Eventos archivados" data-icon="archive"></button>
+          <button id="btn-open-import" class="icon-btn" aria-label="Importar evento" data-icon="download"></button>
+        </div>
       </header>
 
       <div class="search-row">
@@ -190,6 +193,25 @@
         <p id="celebration-name" class="celebration-name"></p>
         <div class="confetti" id="confetti"></div>
         <button class="icon-btn back-btn" data-target="view-main">Volver al inicio</button>
+      </div>
+    </section>
+
+    <!-- ===================== ARCHIVED VIEW ===================== -->
+    <section id="view-archived" class="view">
+      <header class="topbar">
+        <button class="icon-btn back-btn icon-only" data-target="view-list" aria-label="Volver" data-icon="arrowLeft"></button>
+        <h1 class="logo">Archivados</h1>
+        <span class="icon-btn placeholder"></span>
+      </header>
+
+      <p class="form-hint archived-hint">Los eventos pasados se archivan automáticamente a las 24h y se eliminan a los 30 días de archivados.</p>
+
+      <ul id="archived-list" class="event-list"></ul>
+
+      <div id="archived-empty-state" class="empty-state hidden">
+        <div class="empty-icon-circle empty-icon-circle-muted" data-icon="archive"></div>
+        <p class="empty-title">No hay eventos archivados</p>
+        <p class="empty-subtitle">Aquí aparecerán los eventos pasados que se archiven automáticamente.</p>
       </div>
     </section>
 

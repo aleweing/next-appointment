@@ -113,6 +113,12 @@ const App = {
       if (e.target.id === 'modal-paste-import') UI.hideModal('modal-paste-import');
     });
 
+    // Archivados
+    document.getElementById('btn-open-archived').addEventListener('click', () => {
+      this.renderArchivedView();
+      UI.showView('view-archived', 'right');
+    });
+
     // Close modals when clicking the overlay (outside the card)
     document.getElementById('modal-import').addEventListener('click', (e) => {
       if (e.target.id === 'modal-import') this.dismissImport();
@@ -123,6 +129,9 @@ const App = {
 
     // Onboarding: si nunca se ha visto y no hay eventos, crear uno de ejemplo
     this.ensureOnboardingExample();
+
+    // Archivado automático: archiva eventos pasados hace +24h, purga archivados +30 días
+    this.runArchiveMaintenance();
 
     // Initial render
     this.renderAll();
@@ -137,14 +146,15 @@ const App = {
 
   /** Renderiza carrusel + lista con los datos actuales */
   renderAll() {
-    const events = Storage.getAll();
+    const allEvents = Storage.getAll();
+    const activeEvents = Storage.getActive();
     const sortMode = Storage.getSortMode();
-    UI.renderCarousel(events);
-    UI.renderCategoryFilterBar(events, this.activeCategory);
-    UI.renderList(events, sortMode, this.activeCategory, this.searchQuery);
+    UI.renderCarousel(activeEvents);
+    UI.renderCategoryFilterBar(activeEvents, this.activeCategory);
+    UI.renderList(activeEvents, sortMode, this.activeCategory, this.searchQuery);
     UI.renderSortBar(sortMode);
-    this.checkCelebrations(events);
-    this.checkNotifications(events);
+    this.checkCelebrations(allEvents);
+    this.checkNotifications(allEvents);
   },
 
   /**
@@ -152,7 +162,7 @@ const App = {
    * categoría y la búsqueda activos. Usado cuando cambia la búsqueda o el orden.
    */
   refreshList() {
-    const events = Storage.getAll();
+    const events = Storage.getActive();
     UI.renderList(events, Storage.getSortMode(), this.activeCategory, this.searchQuery);
   },
 
@@ -162,7 +172,7 @@ const App = {
    */
   setActiveCategory(categoryId) {
     this.activeCategory = categoryId;
-    const events = Storage.getAll();
+    const events = Storage.getActive();
     UI.renderCategoryFilterBar(events, this.activeCategory);
     this.refreshList();
   },
@@ -181,8 +191,9 @@ const App = {
     if (this.tickInterval) clearInterval(this.tickInterval);
 
     this.tickInterval = setInterval(() => {
-      const events = Storage.getAll();
-      const eventsById = new Map(events.map((e) => [e.id, e]));
+      const allEvents = Storage.getAll();
+      const activeEvents = allEvents.filter((e) => !e.archivedAt);
+      const eventsById = new Map(activeEvents.map((e) => [e.id, e]));
 
       const activeView = document.querySelector('.view.view-active');
       const activeViewId = activeView ? activeView.id : null;
@@ -190,7 +201,7 @@ const App = {
       if (activeViewId === 'view-main') {
         this.updateVisibleCarouselCard(eventsById);
       } else if (activeViewId === 'view-list') {
-        this.updateListCountdowns(events);
+        this.updateListCountdowns(activeEvents);
       } else if (activeViewId === 'view-form') {
         this.updatePreview();
       }
@@ -367,6 +378,66 @@ const App = {
     const example = Storage.getAll().find((e) => e.isOnboardingExample);
     if (example) Storage.remove(example.id);
     this.openCreateForm();
+  },
+
+  /**
+   * Mantenimiento de archivado automático, se ejecuta al abrir la app:
+   * - Archiva eventos NO recurrentes cuya fecha/hora pasó hace 24h o más.
+   * - Elimina definitivamente eventos archivados hace 30 días o más.
+   * Los eventos recurrentes nunca se archivan (su countdown siempre
+   * apunta al futuro, así que Countdown.hasElapsed() nunca es true para ellos).
+   */
+  runArchiveMaintenance() {
+    const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000; // 24 horas
+    const DELETE_AFTER_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+    const now = Date.now();
+
+    const events = Storage.getAll();
+    let changed = false;
+
+    events.forEach((event) => {
+      if (event.archivedAt) {
+        // Ya archivado: ¿toca eliminarlo definitivamente?
+        if (now - event.archivedAt >= DELETE_AFTER_MS) {
+          Storage.remove(event.id);
+          changed = true;
+        }
+        return;
+      }
+
+      // No archivado: ¿toca archivarlo? (solo eventos no recurrentes ya pasados)
+      if (event.isOnboardingExample) return; // el ejemplo no se archiva solo
+      if (Countdown.getRecurrence(event).unit !== 'none') return;
+      if (!Countdown.hasElapsed(event)) return;
+
+      const elapsedMs = now - Countdown.getTargetDate(event).getTime();
+      if (elapsedMs >= ARCHIVE_AFTER_MS) {
+        Storage.archive(event.id);
+        changed = true;
+      }
+    });
+
+    return changed;
+  },
+
+  /** Renderiza la vista de eventos archivados */
+  renderArchivedView() {
+    const archived = Storage.getArchived();
+    UI.renderArchivedList(archived);
+    // Inicializar iconos del empty-state de archivados si no se han inicializado aún
+    document.querySelectorAll('#view-archived [data-icon]').forEach((el) => {
+      if (!el.querySelector('svg')) setIcon(el, el.dataset.icon);
+    });
+  },
+
+  /**
+   * Restaura un evento archivado a la lista activa.
+   * @param {string} id
+   */
+  restoreArchivedEvent(id) {
+    Storage.unarchive(id);
+    this.renderArchivedView();
+    this.renderAll();
   },
 
   /** Abre el formulario en modo creación */

@@ -454,6 +454,82 @@ const UI = {
   },
 
   /**
+   * Renderiza la lista de eventos archivados, con botón de restaurar
+   * en cada uno. Ordenados por fecha de archivado, más reciente primero.
+   * @param {Array<Object>} archivedEvents
+   */
+  renderArchivedList(archivedEvents) {
+    const list = document.getElementById('archived-list');
+    const emptyState = document.getElementById('archived-empty-state');
+
+    list.innerHTML = '';
+
+    if (!archivedEvents.length) {
+      emptyState.classList.remove('hidden');
+      return;
+    }
+    emptyState.classList.add('hidden');
+
+    const sorted = [...archivedEvents].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+
+    sorted.forEach((event) => {
+      const li = document.createElement('li');
+      li.className = 'event-list-item archived-list-item';
+
+      const emoji = document.createElement('div');
+      emoji.className = 'event-list-emoji';
+      emoji.style.background = (event.color || '#6c5ce7') + '22';
+      emoji.textContent = event.emoji || '⏳';
+
+      const info = document.createElement('div');
+      info.className = 'event-list-info';
+
+      const name = document.createElement('div');
+      name.className = 'event-list-name';
+      name.textContent = event.name;
+
+      const category = getCategoryById(event.category);
+      const categoryTag = document.createElement('span');
+      categoryTag.className = 'event-list-category';
+      categoryTag.textContent = `${category.emoji} ${category.label}`;
+
+      const date = document.createElement('div');
+      date.className = 'event-list-date';
+      date.textContent = Countdown.formatDate(event);
+
+      const daysLeft = event.archivedAt
+        ? Math.max(0, 30 - Math.floor((Date.now() - event.archivedAt) / 86400000))
+        : 30;
+      const archivedNote = document.createElement('div');
+      archivedNote.className = 'event-list-category';
+      archivedNote.textContent = daysLeft > 0
+        ? `Se eliminará en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
+        : 'Se eliminará pronto';
+
+      info.appendChild(name);
+      info.appendChild(categoryTag);
+      info.appendChild(date);
+      info.appendChild(archivedNote);
+
+      const restoreBtn = document.createElement('button');
+      restoreBtn.type = 'button';
+      restoreBtn.className = 'archived-restore-btn';
+      restoreBtn.setAttribute('aria-label', 'Restaurar evento');
+      setIcon(restoreBtn, 'rotateCcw');
+      restoreBtn.onclick = (e) => {
+        e.stopPropagation();
+        App.restoreArchivedEvent(event.id);
+      };
+
+      li.appendChild(emoji);
+      li.appendChild(info);
+      li.appendChild(restoreBtn);
+
+      list.appendChild(li);
+    });
+  },
+
+  /**
    * Renderiza el grid de selección de emoji en el formulario.
    * @param {string} selected
    */

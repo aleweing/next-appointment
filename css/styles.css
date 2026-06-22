@@ -102,6 +102,11 @@ body {
   flex: 1;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .icon-btn {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -979,6 +984,34 @@ input:focus, select:focus {
   color: var(--text-muted);
   font-weight: 400;
   margin-top: -2px;
+}
+
+.archived-hint {
+  margin-bottom: 18px;
+  margin-top: -4px;
+}
+
+.archived-list-item {
+  opacity: 0.85;
+}
+
+.archived-restore-btn {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.archived-restore-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .notify-row {

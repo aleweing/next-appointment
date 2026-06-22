@@ -101,6 +101,46 @@ const Storage = {
   markOnboardingSeen() {
     localStorage.setItem(ONBOARDING_KEY, 'true');
   },
+
+  /**
+   * Marca un evento como archivado (se le añade archivedAt con la fecha actual).
+   * @param {string} id
+   */
+  archive(id) {
+    const events = this.getAll();
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+    event.archivedAt = Date.now();
+    this.saveAll(events);
+  },
+
+  /**
+   * Quita la marca de archivado de un evento (lo devuelve a la lista activa).
+   * @param {string} id
+   */
+  unarchive(id) {
+    const events = this.getAll();
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+    delete event.archivedAt;
+    this.saveAll(events);
+  },
+
+  /**
+   * Devuelve solo los eventos NO archivados (lo que se ve en carrusel/lista normal).
+   * @returns {Array<Object>}
+   */
+  getActive() {
+    return this.getAll().filter((e) => !e.archivedAt);
+  },
+
+  /**
+   * Devuelve solo los eventos archivados.
+   * @returns {Array<Object>}
+   */
+  getArchived() {
+    return this.getAll().filter((e) => !!e.archivedAt);
+  },
 };
 
 /**
