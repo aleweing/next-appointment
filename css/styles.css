@@ -1134,6 +1134,48 @@ input:focus, select:focus {
   flex: 1;
 }
 
+/* ===== Missed recurring events banner ===== */
+.missed-recurring-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.missed-recurring-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.missed-recurring-item:first-child {
+  border-top: none;
+}
+
+.missed-recurring-emoji {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.missed-recurring-info {
+  flex: 1;
+}
+
+.missed-recurring-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.missed-recurring-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .share-link-row {
   display: flex;
   gap: 8px;

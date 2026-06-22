@@ -127,11 +127,33 @@ const App = {
       if (e.target.id === 'modal-share') UI.hideModal('modal-share');
     });
 
+    // Banner de recurrentes perdidos
+    document.getElementById('btn-missed-recurring-close').addEventListener('click', () => {
+      UI.hideModal('modal-missed-recurring');
+    });
+
     // Onboarding: si nunca se ha visto y no hay eventos, crear uno de ejemplo
     this.ensureOnboardingExample();
 
     // Archivado automático: archiva eventos pasados hace +24h, purga archivados +30 días
     this.runArchiveMaintenance();
+
+    // Banner de eventos recurrentes cumplidos mientras la app estaba cerrada
+    this.checkMissedRecurringEvents();
+
+    // Guardar timestamp de esta apertura (para la próxima vez)
+    Storage.setLastSeen();
+
+    // Cuando la app vuelve a primer plano (desde segundo plano),
+    // repetir la comprobación de eventos recurrentes perdidos
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.checkMissedRecurringEvents();
+        Storage.setLastSeen();
+        this.runArchiveMaintenance();
+        this.renderAll();
+      }
+    });
 
     // Initial render
     this.renderAll();
@@ -418,6 +440,117 @@ const App = {
     });
 
     return changed;
+  },
+
+  /**
+   * Comprueba si algún evento recurrente se cumplió mientras la app estaba
+   * cerrada (comparando con el timestamp de la última apertura guardado).
+   * Si encuentra alguno, muestra el banner-resumen enumerándolos con nombre
+   * y fecha. Solo se muestra si hay al menos uno y hay un lastSeen previo.
+   */
+  checkMissedRecurringEvents() {
+    const lastSeen = Storage.getLastSeen();
+    if (!lastSeen) return; // primera apertura, no hay "mientras estaba cerrada"
+
+    const now = Date.now();
+    if (now - lastSeen < 60 * 1000) return; // menos de 1 minuto: no mostrar (recargas normales)
+
+    const events = Storage.getActive();
+    const missed = [];
+
+    events.forEach((event) => {
+      const recurrence = Countdown.getRecurrence(event);
+      if (recurrence.unit === 'none') return;
+
+      // Partimos de la fecha original del evento y avanzamos hasta encontrar
+      // la primera ocurrencia que cae dentro de la ventana (lastSeen, now].
+      // Límite de retroceso: empezamos desde la ocurrencia anterior a now
+      // para evitar iterar desde el año de creación del evento.
+      let start = this.subtractRecurrence(
+        Countdown.getTargetDate(event),
+        recurrence.unit,
+        recurrence.interval
+      );
+
+      // Retroceder lo suficiente para cubrir toda la ventana
+      let guard = 0;
+      while (start.getTime() > lastSeen && guard < 10000) {
+        start = this.subtractRecurrence(start, recurrence.unit, recurrence.interval);
+        guard++;
+      }
+
+      // Avanzar desde start, recogiendo todas las ocurrencias en (lastSeen, now]
+      let check = Countdown.advanceByRecurrence(start, recurrence.unit, recurrence.interval);
+      const fired = [];
+      guard = 0;
+      while (check.getTime() <= now && guard < 1000) {
+        if (check.getTime() > lastSeen) fired.push(new Date(check));
+        check = Countdown.advanceByRecurrence(check, recurrence.unit, recurrence.interval);
+        guard++;
+      }
+
+      if (fired.length > 0) {
+        missed.push({ event, date: fired[fired.length - 1] });
+      }
+    });
+
+    if (!missed.length) return;
+
+    // Ordenar por fecha más reciente primero
+    missed.sort((a, b) => b.date - a.date);
+
+    // Renderizar el listado del banner
+    const list = document.getElementById('missed-recurring-list');
+    list.innerHTML = '';
+    missed.forEach(({ event, date }) => {
+      const li = document.createElement('li');
+      li.className = 'missed-recurring-item';
+
+      const emoji = document.createElement('span');
+      emoji.className = 'missed-recurring-emoji';
+      emoji.textContent = event.emoji || '⏳';
+
+      const info = document.createElement('div');
+      info.className = 'missed-recurring-info';
+
+      const name = document.createElement('div');
+      name.className = 'missed-recurring-name';
+      name.textContent = event.name;
+
+      const dateEl = document.createElement('div');
+      dateEl.className = 'missed-recurring-date';
+      const options = { weekday: 'long', day: 'numeric', month: 'long' };
+      let formatted = date.toLocaleDateString('es-ES', options);
+      formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+      dateEl.textContent = formatted;
+
+      info.appendChild(name);
+      info.appendChild(dateEl);
+      li.appendChild(emoji);
+      li.appendChild(info);
+      list.appendChild(li);
+    });
+
+    UI.showModal('modal-missed-recurring');
+  },
+
+  /**
+   * Retrocede una fecha una "unidad x cantidad" según el tipo de recurrencia.
+   * Es el opuesto de Countdown.advanceByRecurrence.
+   * @param {Date} date
+   * @param {'day'|'week'|'month'|'year'} unit
+   * @param {number} interval
+   * @returns {Date}
+   */
+  subtractRecurrence(date, unit, interval = 1) {
+    const prev = new Date(date);
+    switch (unit) {
+      case 'day':   prev.setDate(prev.getDate() - interval); break;
+      case 'week':  prev.setDate(prev.getDate() - interval * 7); break;
+      case 'month': prev.setMonth(prev.getMonth() - interval); break;
+      case 'year':  prev.setFullYear(prev.getFullYear() - interval); break;
+    }
+    return prev;
   },
 
   /** Renderiza la vista de eventos archivados */

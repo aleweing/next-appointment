@@ -6,6 +6,7 @@ const STORAGE_KEY = 'next-appointment:events';
 const THEME_KEY = 'next-appointment:theme';
 const SORT_KEY = 'next-appointment:sort';
 const ONBOARDING_KEY = 'next-appointment:onboarding-seen';
+const LAST_SEEN_KEY = 'next-appointment:last-seen';
 
 const Storage = {
   /**
@@ -100,6 +101,22 @@ const Storage = {
 
   markOnboardingSeen() {
     localStorage.setItem(ONBOARDING_KEY, 'true');
+  },
+
+  /**
+   * Devuelve el timestamp (ms) de la última vez que la app estuvo abierta.
+   * Null si nunca se ha guardado (primera apertura).
+   */
+  getLastSeen() {
+    const raw = localStorage.getItem(LAST_SEEN_KEY);
+    return raw ? parseInt(raw, 10) : null;
+  },
+
+  /**
+   * Guarda el timestamp actual como "última vez que la app estuvo abierta".
+   */
+  setLastSeen() {
+    localStorage.setItem(LAST_SEEN_KEY, String(Date.now()));
   },
 
   /**
