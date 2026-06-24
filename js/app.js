@@ -113,6 +113,32 @@ const App = {
       if (e.target.id === 'modal-paste-import') UI.hideModal('modal-paste-import');
     });
 
+    // File picker inside paste-import modal
+    document.getElementById('btn-paste-import-file').addEventListener('click', () => {
+      document.getElementById('import-file-input').click();
+    });
+    document.getElementById('import-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) this.importFromFile(file);
+      e.target.value = '';
+    });
+
+    // Export modal
+    document.getElementById('btn-open-export').addEventListener('click', () => this.openExportModal());
+    document.getElementById('btn-export-download').addEventListener('click', () => this.exportAsJson());
+    document.getElementById('btn-export-clipboard').addEventListener('click', () => this.exportToClipboard());
+    document.getElementById('btn-export-close').addEventListener('click', () => UI.hideModal('modal-export'));
+    document.getElementById('modal-export').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-export') UI.hideModal('modal-export');
+    });
+
+    // Bulk JSON import confirmation modal
+    document.getElementById('btn-import-json-cancel').addEventListener('click', () => UI.hideModal('modal-import-json'));
+    document.getElementById('btn-import-json-accept').addEventListener('click', () => this.acceptBulkJsonImport());
+    document.getElementById('modal-import-json').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-import-json') UI.hideModal('modal-import-json');
+    });
+
     // Archivados
     document.getElementById('btn-open-archived').addEventListener('click', () => {
       this.renderArchivedView();
@@ -902,21 +928,26 @@ const App = {
     setTimeout(() => document.getElementById('paste-import-input').focus(), 50);
   },
 
-  /** Confirma el contenido pegado, lo intenta decodificar y pasa al preview */
+  /** Confirma el contenido pegado: puede ser JSON masivo, enlace o código base64 */
   confirmPasteImport() {
-    const raw = document.getElementById('paste-import-input').value;
-    const encoded = this.extractEncodedFromInput(raw);
+    const raw = document.getElementById('paste-import-input').value.trim();
     const errorEl = document.getElementById('paste-import-error');
+    errorEl.classList.add('hidden');
 
-    const success = encoded && this.tryShowImportPreview(encoded);
-
-    if (!success) {
+    if (!raw) {
       errorEl.classList.remove('hidden');
       return;
     }
 
-    errorEl.classList.add('hidden');
     UI.hideModal('modal-paste-import');
+    const success = this._handleImportText(raw);
+
+    if (!success) {
+      // Vuelve a mostrar el modal con el error
+      document.getElementById('paste-import-input').value = raw;
+      errorEl.classList.remove('hidden');
+      UI.showModal('modal-paste-import');
+    }
   },
 
   /** Acepta el evento importado y lo añade a los eventos del usuario */
@@ -963,6 +994,193 @@ const App = {
       navigator.serviceWorker.register('service-worker.js').catch((err) => {
         console.warn('Service worker no registrado:', err);
       });
+    }
+  },
+
+  // ─── EXPORTAR ────────────────────────────────────────────────────────────
+
+  /** Abre el modal de exportación mostrando cuántos eventos se van a exportar */
+  openExportModal() {
+    const events = Storage.getActive();
+    const count = events.length;
+    document.getElementById('export-count').textContent =
+      count === 0 ? 'No tienes eventos activos para exportar.'
+      : count === 1 ? '1 evento activo se incluirá en la exportación.'
+      : `${count} eventos activos se incluirán en la exportación.`;
+    UI.showModal('modal-export');
+  },
+
+  /** Genera el JSON de exportación (solo eventos activos, sin flags internos) */
+  _buildExportJson() {
+    const events = Storage.getActive().map((e) => {
+      const { unit, interval } = Countdown.getRecurrence(e);
+      return {
+        id: e.id,
+        name: e.name,
+        date: e.date,
+        time: e.time || '00:00',
+        emoji: e.emoji || '⏳',
+        color: e.color || '#6c5ce7',
+        category: e.category || 'other',
+        recurrenceUnit: unit,
+        recurrenceInterval: interval,
+        notifyBefore: e.notifyBefore || null,
+      };
+    });
+    return JSON.stringify({ version: 1, app: 'next-appointment', events }, null, 2);
+  },
+
+  /** Descarga un archivo .json con todos los eventos activos */
+  exportAsJson() {
+    const json = this._buildExportJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `next-appointment-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const btn = document.getElementById('btn-export-download');
+    const original = btn.textContent;
+    btn.textContent = '✅ Descargado';
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  },
+
+  /** Copia el JSON de exportación al portapapeles */
+  exportToClipboard() {
+    const json = this._buildExportJson();
+    const btn = document.getElementById('btn-export-clipboard');
+    const original = btn.textContent;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(json).then(() => {
+        btn.textContent = '✅ Copiado';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      }).catch(() => {
+        btn.textContent = '❌ Error al copiar';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      });
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = json;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent = '✅ Copiado';
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    }
+  },
+
+  // ─── IMPORTAR JSON ────────────────────────────────────────────────────────
+
+  /**
+   * Intenta parsear texto pegado o cargado desde archivo.
+   * Si es JSON de exportación → flujo de importación masiva.
+   * Si es enlace/código base64 → flujo individual existente.
+   */
+  _tryParseExportJson(text) {
+    try {
+      const data = JSON.parse(text);
+      if (data && data.app === 'next-appointment' && Array.isArray(data.events)) {
+        return data.events;
+      }
+    } catch (e) { /* no es JSON */ }
+    return null;
+  },
+
+  /** Lee un archivo .json seleccionado desde el file picker */
+  importFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      UI.hideModal('modal-paste-import');
+      this._handleImportText(text);
+    };
+    reader.onerror = () => {
+      document.getElementById('paste-import-error').classList.remove('hidden');
+    };
+    reader.readAsText(file);
+  },
+
+  /**
+   * Enruta el texto importado: JSON masivo o enlace/código individual.
+   * @param {string} text
+   * @returns {boolean} true si se pudo procesar
+   */
+  _handleImportText(text) {
+    const bulkEvents = this._tryParseExportJson(text);
+    if (bulkEvents) {
+      this._showBulkJsonImportModal(bulkEvents);
+      return true;
+    }
+
+    // Fallback: intenta como enlace/código individual
+    const encoded = this.extractEncodedFromInput(text);
+    if (encoded) {
+      const success = this.tryShowImportPreview(encoded);
+      if (success) return true;
+    }
+
+    return false;
+  },
+
+  /** Muestra el modal de confirmación de importación masiva */
+  _showBulkJsonImportModal(events) {
+    this._pendingBulkImport = events;
+    const existing = new Set(Storage.getAll().map((e) => e.id));
+    const newCount = events.filter((e) => !existing.has(e.id)).length;
+    const skipCount = events.length - newCount;
+
+    let summary = `El archivo contiene ${events.length} evento${events.length !== 1 ? 's' : ''}.`;
+    if (newCount > 0) summary += ` Se añadirán ${newCount} nuevo${newCount !== 1 ? 's' : ''}.`;
+    if (skipCount > 0) summary += ` Se omitirán ${skipCount} ya existente${skipCount !== 1 ? 's' : ''}.`;
+
+    document.getElementById('import-json-summary').textContent = summary;
+    UI.showModal('modal-import-json');
+  },
+
+  /** Acepta e importa todos los eventos del JSON (omite duplicados por ID) */
+  acceptBulkJsonImport() {
+    if (!this._pendingBulkImport) return;
+
+    const existing = new Set(Storage.getAll().map((e) => e.id));
+    const VALID_UNITS = ['none', 'day', 'week', 'month', 'year'];
+    let imported = 0;
+
+    this._pendingBulkImport.forEach((raw) => {
+      if (existing.has(raw.id)) return; // omitir duplicados
+      if (!raw.name || !raw.date) return; // datos mínimos obligatorios
+
+      const event = {
+        id: raw.id || generateId(),
+        name: String(raw.name).slice(0, 40),
+        date: raw.date,
+        time: raw.time || '00:00',
+        emoji: raw.emoji || '⏳',
+        color: raw.color || '#6c5ce7',
+        category: raw.category || 'other',
+        recurrenceUnit: VALID_UNITS.includes(raw.recurrenceUnit) ? raw.recurrenceUnit : 'none',
+        recurrenceInterval: Math.max(1, Number(raw.recurrenceInterval) || 1),
+        notifyBefore: raw.notifyBefore || null,
+        _celebrated: false,
+        _notifiedKey: null,
+      };
+
+      Storage.upsert(event);
+      imported++;
+    });
+
+    this._pendingBulkImport = null;
+    UI.hideModal('modal-import-json');
+    this.renderAll();
+
+    if (imported > 0) {
+      alert(`✅ ${imported} evento${imported !== 1 ? 's' : ''} importado${imported !== 1 ? 's' : ''} correctamente.`);
     }
   },
 };
