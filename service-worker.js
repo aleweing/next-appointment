@@ -2,7 +2,7 @@
    Next Appointment — Service Worker
    ========================================= */
 
-const CACHE_NAME = 'next-appointment-v12';
+const CACHE_NAME = 'next-appointment-v13';
 
 const ASSETS_TO_CACHE = [
   './',
