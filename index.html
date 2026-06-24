@@ -44,7 +44,8 @@
         <h1 class="logo">Mis eventos</h1>
         <div class="topbar-actions">
           <button id="btn-open-archived" class="icon-btn" aria-label="Eventos archivados" data-icon="archive"></button>
-          <button id="btn-open-import" class="icon-btn" aria-label="Importar evento" data-icon="download"></button>
+          <button id="btn-open-export" class="icon-btn" aria-label="Exportar eventos" data-icon="upload"></button>
+          <button id="btn-open-import" class="icon-btn" aria-label="Importar eventos" data-icon="download"></button>
         </div>
       </header>
 
@@ -217,16 +218,47 @@
 
   </div>
 
+  <!-- ===================== EXPORT MODAL ===================== -->
+  <div id="modal-export" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Exportar eventos</h2>
+      <p class="modal-hint">Guarda una copia de seguridad de todos tus eventos activos. Puedes importarla en otro dispositivo o en la misma app si reinstalaras.</p>
+      <p id="export-count" class="modal-hint"></p>
+      <div class="modal-actions modal-actions-col">
+        <button id="btn-export-download" class="btn-primary">⬇️ Descargar como archivo .json</button>
+        <button id="btn-export-clipboard" class="btn-secondary">📋 Copiar JSON al portapapeles</button>
+        <button id="btn-export-close" class="btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== PASTE-TO-IMPORT MODAL ===================== -->
   <div id="modal-paste-import" class="modal-overlay hidden">
     <div class="modal-card">
-      <h2>Importar evento</h2>
-      <p class="modal-hint">Pega aquí el enlace o el código que te han compartido.</p>
-      <textarea id="paste-import-input" class="paste-import-textarea" placeholder="https://...?import=... o solo el código" rows="3"></textarea>
-      <p id="paste-import-error" class="paste-import-error hidden">No hemos podido leer ese enlace o código. Comprueba que esté completo.</p>
+      <h2>Importar eventos</h2>
+      <p class="modal-hint">Pega aquí el enlace o código de un evento compartido, o el JSON de una exportación completa.</p>
+      <textarea id="paste-import-input" class="paste-import-textarea" placeholder="https://...?import=... · código · o JSON de exportación" rows="4"></textarea>
+      <p id="paste-import-error" class="paste-import-error hidden">No hemos podido leer ese contenido. Comprueba que esté completo.</p>
+      <div class="modal-actions">
+        <button id="btn-paste-import-file" class="btn-secondary">📂 Abrir archivo .json</button>
+        <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+      </div>
       <div class="modal-actions">
         <button id="btn-paste-import-cancel" class="btn-secondary">Cancelar</button>
-        <button id="btn-paste-import-confirm" class="btn-primary">Buscar evento</button>
+        <button id="btn-paste-import-confirm" class="btn-primary">Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BULK JSON IMPORT MODAL ===================== -->
+  <div id="modal-import-json" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Importar copia de seguridad</h2>
+      <p id="import-json-summary" class="modal-hint"></p>
+      <p class="modal-hint">Los eventos con el mismo ID ya existente se omitirán para no crear duplicados.</p>
+      <div class="modal-actions">
+        <button id="btn-import-json-cancel" class="btn-secondary">Cancelar</button>
+        <button id="btn-import-json-accept" class="btn-primary">Importar todos</button>
       </div>
     </div>
   </div>
