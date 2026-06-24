@@ -1,87 +1,127 @@
 # ⏳ Next Appointment
 
-Aplicación web de countdown 100% client-side. Crea tus propios eventos con nombre, fecha, hora, emoji y color, y mira la cuenta atrás en tiempo real. Sin registro, sin anuncios, funciona offline (PWA).
+Aplicación web PWA de countdown donde el usuario crea sus propios eventos con nombre, fecha, hora, emoji, color, categoría y recurrencia. Una pantalla para cualquier cosa que estés esperando.
 
-## 🚀 Demo local
+## Concepto
+Sin registro, sin anuncios, funciona offline. Bodas, viajes, cumpleaños, estrenos, exámenes — cualquier cosa.
 
-No requiere build ni dependencias. Solo necesitas servir los archivos estáticos (el Service Worker no funciona con `file://`, necesita `http://`).
+## Stack tecnológico
+- HTML5 / CSS3 / JavaScript vanilla (sin frameworks)
+- localStorage para todos los datos
+- PWA (manifest + service worker) para instalación offline
+- Iconos SVG inline propios (estilo Tabler, sin dependencias externas)
 
-```bash
-# Con Python
-python3 -m http.server 8080
-
-# Con Node (npx)
-npx serve .
+## Arquitectura
+```
+100% cliente — sin backend, sin APIs externas
+localStorage → persistencia de eventos
+Service Worker (network-first para JS/CSS/HTML) → uso offline
 ```
 
-Luego abre `http://localhost:8080`.
-
-## 📂 Estructura
-
+## Estructura de archivos
 ```
 next-appointment/
-├── index.html          # Las 4 vistas: main, lista, formulario, celebración
-├── manifest.json        # Configuración PWA
-├── service-worker.js    # Cache offline
+├── index.html              # 5 vistas: main, lista, formulario, celebración, archivados
+├── manifest.json
+├── service-worker.js       # Cache v11, network-first para assets de código
 ├── css/
 │   └── styles.css
 ├── js/
-│   ├── storage.js       # Persistencia en localStorage
-│   ├── countdown.js     # Cálculo de cuentas atrás
-│   ├── ui.js             # Renderizado de cards, listas, grids
-│   └── app.js            # Lógica principal / eventos
+│   ├── icons.js            # ⚠️ SVG inline de todos los iconos de interfaz
+│   ├── storage.js          # localStorage: eventos, tema, sort, onboarding, lastSeen
+│   ├── countdown.js        # Lógica de cuenta atrás y recurrencia
+│   ├── ui.js               # ⚠️ CATEGORIES aquí: renderizado de vistas y componentes
+│   └── app.js              # Lógica principal, navegación, tick optimizado
 └── icons/
     ├── icon-192.png
     └── icon-512.png
 ```
 
-## ✅ Funcionalidades implementadas (MVP)
+## Funcionalidades implementadas
 
-- Crear, editar y eliminar eventos (nombre, fecha, hora, emoji, color)
-- Countdown en vivo (días, horas, minutos, segundos)
-- Carrusel de eventos con swipe táctil real + scroll-snap + indicadores (dots)
-- Vista de lista ordenada y filtrable (próximos, lejanos, nombre, recién creados)
-- Vista previa en tiempo real al crear/editar
-- Eventos recurrentes (anuales)
-- Pantalla de celebración con confetti al llegar a cero
-- Tema claro/oscuro (con detección automática del sistema)
-- Transiciones de slide entre vistas
-- Compartir evento vía enlace (el receptor puede importar una copia a su propia lista, sin backend)
-- Avisos/notificaciones configurables (5 min / 1 hora / 1 día antes), mientras la app está abierta
-- Todo en localStorage, sin backend
-- PWA instalable con soporte offline básico
+### Eventos
+- Crear, editar y eliminar eventos con: nombre, fecha, hora, emoji, color de acento, categoría
+- Countdown en vivo (días/horas/min/seg), actualizado cada segundo
+- Recurrencia configurable: cada X días / semanas / meses / años
+- Aviso configurable: X días/horas/min antes (solo si la app está abierta)
+- Retrocompatibilidad con tres formatos antiguos de recurrencia
 
-## ⚠️ Notas sobre notificaciones
+### Categorías
+- ⚠️ **Único lugar a editar**: `js/ui.js`, constante `CATEGORIES`
+- Actuales: Cumpleaños, Salud, Fiestas, Ferias, Festivales, Viajes, Otros
+- Cada categoría: `{ id, label, emoji }` — el `id` no debe cambiarse una vez en uso
 
-Las notificaciones de aviso ("avisarme X antes") solo se disparan mientras la app está abierta o recién en segundo plano. iOS no permite alarmas programadas en background sin un servidor de Web Push, así que esta función es un complemento, no un recordatorio garantizado.
+### Carrusel principal
+- Swipe nativo vía CSS scroll-snap — sin JS de touch (solución canónica, no revertir)
+- Tick optimizado: solo actualiza la card visible
 
-## 🔗 Compartir eventos
+### Vista "Mis eventos"
+- Buscador en vivo por nombre (insensible a mayúsculas y acentos)
+- Chips de ordenación y filtro por categoría (combinables)
 
-Al pulsar "Compartir" en un evento se genera un enlace con los datos codificados (`?import=...`). Quien abra ese enlace verá un modal para añadir una copia del evento a su propia lista. Es una copia independiente: si el creador edita el evento después, los cambios no se sincronizan automáticamente.
+### Archivado automático
+- Eventos NO recurrentes pasados hace ≥24h → se archivan
+- Archivados hace ≥30 días → se eliminan definitivamente
+- Vista "Archivados" con botón de restaurar
 
-## 🔜 Pendiente / ideas futuras
+### Compartir e importar
+- Link con evento codificado en base64 (`?import=...`)
+- Botón "Importar" manual en "Mis eventos" (resuelve limitación de iOS con PWA)
 
-- Exportar evento como imagen (canvas / html2canvas)
-- Fondos personalizables (color, gradiente, foto)
-- Modo "tiempo transcurrido" (eventos en el pasado)
-- Sincronización en tiempo real entre dispositivos (requeriría backend ligero, ej. Firebase)
+### Onboarding
+- Primera apertura: evento de ejemplo con botón "Crear mi propio evento"
+- Flag en localStorage — nunca vuelve a aparecer
 
-## 🛠️ Stack
+### Modo rápido de creación
+- Formulario: solo nombre + fecha + hora visibles por defecto
+- "Más opciones" despliega el resto
 
-HTML5, CSS3 y JavaScript vanilla. Sin frameworks ni dependencias externas.
+### Avisos de eventos recurrentes cumplidos
+- Banner-resumen al abrir/volver a la app con eventos recurrentes cumplidos en el intervalo cerrado
+- Umbral mínimo: 1 minuto (evita dispararse en recargas normales)
 
-## 📦 Despliegue
+### PWA / Offline
+- `touch-action: manipulation` bloquea zoom accidental sin afectar accesibilidad
+- Service Worker v11, network-first para HTML/CSS/JS
+- Icono: arco de cuenta atrás + calendario (azul #0984e3)
 
-Compatible con GitHub Pages, Netlify, Vercel o cualquier hosting estático:
+## Modelo de datos
 
-```bash
-# GitHub Pages (rama main, carpeta raíz)
-git add .
-git commit -m "Initial commit"
-git push origin main
-# Activar GitHub Pages en Settings > Pages > Source: main / root
+```js
+{
+  id: 'evt_xxx',
+  name: 'Viaje a Japón',
+  date: '2026-09-01',
+  time: '08:00',
+  emoji: '✈️',
+  color: '#0984e3',
+  category: 'travel',
+  recurrenceUnit: 'none',       // 'none'|'day'|'week'|'month'|'year'
+  recurrenceInterval: 1,
+  notifyBefore: 3600,           // segundos, o null
+  archivedAt: null,             // timestamp ms, o null
+  isOnboardingExample: false,
+  _celebrated: false,
+  _notifiedKey: null,
+}
 ```
 
----
+## Claves de localStorage
+| Clave | Contenido |
+|---|---|
+| `next-appointment:events` | Array JSON de todos los eventos |
+| `next-appointment:theme` | `'light'` \| `'dark'` |
+| `next-appointment:sort` | Modo de orden de la lista |
+| `next-appointment:onboarding-seen` | `'true'` si ya se vio el ejemplo |
+| `next-appointment:last-seen` | Timestamp de la última apertura |
 
-*Proyecto derivado de Next Match — misma filosofía: una pantalla, una función, sin ruido.*
+## Despliegue
+GitHub Pages (rama main, carpeta raíz). URL: `https://aleweing.github.io/next-appointment/`
+
+**Importante**: siempre subir el zip completo sobrescribiendo todos los archivos — nunca archivos sueltos.
+
+## Decisiones técnicas clave
+- **Swipe**: 100% CSS scroll-snap, sin JS de touch. No revertir.
+- **Service Worker**: network-first para código, cache-first para imágenes. Versión: `v11`.
+- **Iconos de interfaz**: SVG inline en `js/icons.js`, `setIcon(el, iconName)`. Los emojis de eventos/categorías se mantienen como emoji.
+- **Recurrencia**: `recurrenceUnit` + `recurrenceInterval`. `Countdown.getRecurrence(event)` normaliza los tres formatos históricos.
