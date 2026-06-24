@@ -1232,3 +1232,20 @@ input:focus, select:focus {
   color: #fff;
   border-color: var(--accent);
 }
+
+/* ===== Export modal — botones en columna ===== */
+.modal-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.modal-actions-col button {
+  width: 100%;
+}
+
+/* ===== File input oculto (activado por botón) ===== */
+input[type="file"].hidden {
+  display: none;
+}
