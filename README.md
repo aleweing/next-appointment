@@ -23,7 +23,7 @@ Service Worker (network-first para JS/CSS/HTML) → uso offline
 next-appointment/
 ├── index.html              # 5 vistas: main, lista, formulario, celebración, archivados
 ├── manifest.json
-├── service-worker.js       # Cache v11, network-first para assets de código
+├── service-worker.js       # Cache v13, network-first para assets de código
 ├── css/
 │   └── styles.css
 ├── js/
@@ -64,9 +64,25 @@ next-appointment/
 - Archivados hace ≥30 días → se eliminan definitivamente
 - Vista "Archivados" con botón de restaurar
 
-### Compartir e importar
+### Exportar e importar (copia de seguridad)
+- **Exportar** (botón ⬆️ en "Mis eventos"): genera un archivo `.json` con todos los eventos activos o lo copia al portapapeles. Útil antes de reinstalar la PWA o cambiar de dispositivo.
+- **Importar** (botón ⬇️ en "Mis eventos"): acepta tres formatos:
+  - Enlace compartido (`?import=...`) o código base64 — flujo individual existente
+  - JSON pegado directamente en el textarea — importación masiva
+  - Archivo `.json` seleccionado desde el explorador de archivos — importación masiva
+- La importación masiva muestra un resumen (eventos nuevos vs. duplicados omitidos) antes de confirmar. Los duplicados se detectan por `id` y se omiten silenciosamente.
+- Formato del archivo de exportación:
+```json
+{
+  "version": 1,
+  "app": "next-appointment",
+  "events": [ ... ]
+}
+```
+
+### Compartir evento individual
 - Link con evento codificado en base64 (`?import=...`)
-- Botón "Importar" manual en "Mis eventos" (resuelve limitación de iOS con PWA)
+- Si la otra persona tiene la PWA instalada en iOS, puede pegar el enlace en "Importar"
 
 ### Onboarding
 - Primera apertura: evento de ejemplo con botón "Crear mi propio evento"
@@ -82,7 +98,7 @@ next-appointment/
 
 ### PWA / Offline
 - `touch-action: manipulation` bloquea zoom accidental sin afectar accesibilidad
-- Service Worker v11, network-first para HTML/CSS/JS
+- Service Worker v13, network-first para HTML/CSS/JS
 - Icono: arco de cuenta atrás + calendario (azul #0984e3)
 
 ## Modelo de datos
@@ -122,6 +138,8 @@ GitHub Pages (rama main, carpeta raíz). URL: `https://aleweing.github.io/next-a
 
 ## Decisiones técnicas clave
 - **Swipe**: 100% CSS scroll-snap, sin JS de touch. No revertir.
-- **Service Worker**: network-first para código, cache-first para imágenes. Versión: `v11`.
+- **Service Worker**: network-first para código, cache-first para imágenes. Versión actual: `v13`. Incrementar en cada deploy que modifique JS/CSS/HTML.
 - **Iconos de interfaz**: SVG inline en `js/icons.js`, `setIcon(el, iconName)`. Los emojis de eventos/categorías se mantienen como emoji.
 - **Recurrencia**: `recurrenceUnit` + `recurrenceInterval`. `Countdown.getRecurrence(event)` normaliza los tres formatos históricos.
+- **Exportación/importación masiva**: el enrutador `_handleImportText(text)` decide si el texto es JSON de exportación (`app === 'next-appointment'`) o enlace/código individual. Añadir nuevos formatos de importación aquí.
+- **Icono PWA en iOS**: el icono se fija en el momento de instalar la PWA. Para actualizarlo hay que desinstalar y volver a añadir a pantalla de inicio. Exportar antes para no perder datos.
