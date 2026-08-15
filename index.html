@@ -1,127 +1,314 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Mesa</title>
-  <meta name="theme-color" content="#20261F" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6c5ce7" />
+  <title>Next Appointment ⏳</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <div id="app">
 
-    <!-- Config: primera vez que se abre, pide la URL del Worker y la clave -->
-    <div id="view-config" class="view hidden">
-      <div class="config-box">
-        <h1 class="brand">Mesa<span class="brand-dot">.</span></h1>
-        <p class="muted">Tu cuaderno personal de restaurantes.</p>
-        <label class="field">
-          <span>URL de tu API (Cloudflare Worker)</span>
-          <input type="url" id="cfg-url" placeholder="https://mesa-api.tuusuario.workers.dev" />
-        </label>
-        <label class="field">
-          <span>Clave de acceso</span>
-          <input type="password" id="cfg-key" placeholder="Tu clave privada" />
-        </label>
-        <button class="btn-primary" id="cfg-save">Guardar y entrar</button>
-      </div>
-    </div>
-
-    <!-- Lista -->
-    <div id="view-list" class="view hidden">
+    <!-- ===================== MAIN VIEW ===================== -->
+    <section id="view-main" class="view view-active">
       <header class="topbar">
-        <h1 class="brand">Mesa<span class="brand-dot">.</span></h1>
-        <button class="icon-btn" id="open-settings" aria-label="Ajustes">⚙</button>
+        <button id="btn-theme" class="icon-btn" aria-label="Cambiar tema" data-icon="moon"></button>
+        <h1 class="logo">⏳ Next Appointment</h1>
+        <button id="btn-list" class="icon-btn" aria-label="Ver lista" data-icon="list"></button>
       </header>
 
-      <div id="list-empty" class="empty hidden">
-        <p class="empty-title">Aún no hay ninguna mesa apuntada</p>
-        <p class="muted">Toca “+” cuando vuelvas de tu próximo restaurante.</p>
+      <div id="event-carousel" class="carousel">
+        <!-- Event cards are injected here by JS -->
       </div>
 
-      <ul id="restaurant-list" class="ticket-list"></ul>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-icon-circle" data-icon="hourglassEmpty"></div>
+        <p class="empty-title">Nada en el horizonte todavía</p>
+        <p class="empty-subtitle">Crea tu primera cuenta atrás: un viaje, un cumpleaños, lo que sea que estés esperando.</p>
+        <button id="btn-empty-create" class="btn-primary">Crear evento</button>
+      </div>
 
-      <button class="fab" id="fab-add" aria-label="Añadir restaurante">+</button>
-    </div>
+      <div class="dots" id="carousel-dots"></div>
 
-    <!-- Detalle -->
-    <div id="view-detail" class="view hidden">
+      <button id="btn-create" class="fab" aria-label="Crear evento" data-icon="plus"></button>
+    </section>
+
+    <!-- ===================== LIST VIEW ===================== -->
+    <section id="view-list" class="view">
       <header class="topbar">
-        <button class="icon-btn" id="back-from-detail" aria-label="Volver">←</button>
+        <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Volver" data-icon="arrowLeft"></button>
+        <h1 class="logo">Mis eventos</h1>
         <div class="topbar-actions">
-          <button class="icon-btn" id="edit-restaurant" aria-label="Editar">✎</button>
-          <button class="icon-btn" id="delete-restaurant" aria-label="Eliminar">🗑</button>
+          <button id="btn-open-archived" class="icon-btn" aria-label="Eventos archivados" data-icon="archive"></button>
+          <button id="btn-open-export" class="icon-btn" aria-label="Exportar eventos" data-icon="upload"></button>
+          <button id="btn-open-import" class="icon-btn" aria-label="Importar eventos" data-icon="download"></button>
         </div>
       </header>
 
-      <div id="detail-photos" class="photo-strip"></div>
-
-      <div class="detail-body">
-        <span id="detail-owner-tag" class="owner-tag hidden"></span>
-        <h2 id="detail-name" class="restaurant-name"></h2>
-        <a id="detail-address" class="link-row" target="_blank" rel="noopener"></a>
-        <a id="detail-phone" class="link-row" href="#"></a>
-        <p id="detail-notes" class="notes hidden"></p>
-
-        <div class="divider"></div>
-
-        <h3 class="section-label">Platos</h3>
-        <ul id="dish-list" class="dish-list"></ul>
-        <button class="btn-ghost" id="add-dish">+ Añadir plato</button>
-
-        <div class="divider"></div>
-
-        <h3 class="section-label">Fotos generales (fachada, menú, cuenta…)</h3>
-        <label class="btn-ghost upload-label">
-          + Añadir foto
-          <input type="file" id="photo-input" accept="image/*" capture="environment" multiple hidden />
-        </label>
-        <input type="file" id="dish-photo-input" accept="image/*" capture="environment" multiple hidden />
+      <div class="search-row">
+        <span class="search-icon" data-icon="search"></span>
+        <input type="text" id="search-input" class="search-input" placeholder="Buscar evento..." autocomplete="off" />
+        <button id="btn-clear-search" class="search-clear hidden" aria-label="Borrar búsqueda" data-icon="x"></button>
       </div>
-    </div>
 
-    <!-- Formulario restaurante (crear/editar) -->
-    <div id="view-form" class="view hidden">
+      <div class="sort-bar" id="sort-bar">
+        <button class="sort-chip active" data-sort="date-asc">Próximos primero</button>
+        <button class="sort-chip" data-sort="date-desc">Lejanos primero</button>
+        <button class="sort-chip" data-sort="name">Nombre A-Z</button>
+        <button class="sort-chip" data-sort="created">Recién creados</button>
+      </div>
+
+      <div class="category-filter-bar" id="category-filter-bar"></div>
+
+      <ul id="event-list" class="event-list"></ul>
+
+      <div id="list-empty-state" class="empty-state hidden">
+        <div class="empty-icon-circle empty-icon-circle-muted" id="list-empty-icon" data-icon="hourglassEmpty"></div>
+        <p class="empty-title" id="list-empty-title">Nada en el horizonte todavía</p>
+        <p class="empty-subtitle" id="list-empty-subtitle">No hay eventos creados todavía.</p>
+        <button id="btn-list-empty-action" class="btn-secondary hidden">Ver todas las categorías</button>
+      </div>
+
+      <button id="btn-create-from-list" class="fab" aria-label="Crear evento" data-icon="plus"></button>
+    </section>
+
+    <!-- ===================== CREATE/EDIT VIEW ===================== -->
+    <section id="view-form" class="view">
       <header class="topbar">
-        <button class="icon-btn" id="back-from-form" aria-label="Cancelar">←</button>
-        <h2 id="form-title" class="form-title">Nueva mesa</h2>
-        <button class="icon-btn" id="save-restaurant" aria-label="Guardar">✓</button>
+        <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Cancelar" data-icon="arrowLeft"></button>
+        <h1 class="logo" id="form-title">Nuevo evento</h1>
+        <button id="btn-delete-event" class="icon-btn hidden" aria-label="Eliminar" data-icon="trash"></button>
       </header>
-      <div class="detail-body">
-        <label class="field">
-          <span>Nombre *</span>
-          <input type="text" id="form-name" placeholder="Ej. Ca'n Pep" />
-        </label>
-        <label class="field">
-          <span>Dirección</span>
-          <input type="text" id="form-address" placeholder="Calle, ciudad" />
-        </label>
-        <label class="field">
-          <span>Teléfono</span>
-          <input type="tel" id="form-phone" placeholder="Para reservar" />
-        </label>
-        <label class="field">
-          <span>Notas generales</span>
-          <textarea id="form-notes" rows="3" placeholder="Para mi hija: solo arroz con pollo…"></textarea>
-        </label>
-        <label class="field-toggle">
-          <input type="checkbox" id="form-shared" />
-          <span>Compartir con el otro usuario</span>
-        </label>
+
+      <form id="event-form" class="event-form">
+        <input type="hidden" id="event-id" />
+
+        <div class="form-group">
+          <label for="event-name">Nombre del evento</label>
+          <input type="text" id="event-name" placeholder="Ej: Viaje a Japón" required maxlength="40" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="event-date">Fecha</label>
+            <input type="date" id="event-date" required />
+          </div>
+          <div class="form-group">
+            <label for="event-time">Hora</label>
+            <input type="time" id="event-time" value="00:00" required />
+          </div>
+        </div>
+
+        <button type="button" id="btn-toggle-advanced" class="advanced-toggle">
+          <span class="advanced-toggle-icon">⚙️</span>
+          <span id="advanced-toggle-label">Más opciones (icono, color, categoría...)</span>
+          <span class="advanced-toggle-chevron" id="advanced-toggle-chevron">▾</span>
+        </button>
+
+        <div id="advanced-fields" class="advanced-fields" hidden>
+
+          <div class="form-group">
+            <label>Icono</label>
+            <div class="emoji-grid" id="emoji-grid"></div>
+            <input type="hidden" id="event-emoji" value="⏳" />
+          </div>
+
+          <div class="form-group">
+            <label>Color de acento</label>
+            <div class="color-grid" id="color-grid"></div>
+            <input type="hidden" id="event-color" value="#6c5ce7" />
+          </div>
+
+          <div class="form-group">
+            <label>Categoría</label>
+            <div class="category-grid" id="category-grid"></div>
+            <input type="hidden" id="event-category" value="other" />
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="event-repeat-toggle" />
+              Repetir este evento
+            </label>
+            <div class="repeat-row" id="repeat-row" hidden>
+              <span class="repeat-prefix">Cada</span>
+              <input type="number" id="event-recurrence-interval" min="1" max="999" value="1" inputmode="numeric" />
+              <select id="event-recurrence-unit">
+                <option value="day">día(s)</option>
+                <option value="week">semana(s)</option>
+                <option value="month">mes(es)</option>
+                <option value="year">año(s)</option>
+              </select>
+            </div>
+            <p class="form-hint" id="repeat-hint" hidden>Ej: cada 2 semanas, cada 3 días, cada 1 año (cumpleaños, aniversarios...).</p>
+          </div>
+
+          <div class="form-group">
+            <label>Avisarme antes</label>
+            <div class="notify-row">
+              <div class="notify-field">
+                <input type="number" id="event-notify-days" min="0" max="365" value="0" inputmode="numeric" />
+                <span>días</span>
+              </div>
+              <div class="notify-field">
+                <input type="number" id="event-notify-hours" min="0" max="23" value="0" inputmode="numeric" />
+                <span>horas</span>
+              </div>
+              <div class="notify-field">
+                <input type="number" id="event-notify-minutes" min="0" max="59" value="0" inputmode="numeric" />
+                <span>min</span>
+              </div>
+            </div>
+            <p class="form-hint" id="notify-hint">Déjalo a 0 para no avisar. Necesitas tener la app abierta (o en segundo plano reciente) para recibir el aviso.</p>
+          </div>
+
+        </div>
+
+        <p class="form-hint advanced-collapsed-hint" id="advanced-collapsed-hint">Icono ⏳ · Color morado · Categoría Otros · Sin repetición · Sin aviso — puedes cambiarlo luego editando el evento.</p>
+
+
+        <!-- Live preview -->
+        <div class="form-group">
+          <label>Vista previa</label>
+          <div id="preview-card" class="event-card preview-card">
+            <div class="card-emoji" id="preview-emoji">⏳</div>
+            <div class="card-name" id="preview-name">Nombre del evento</div>
+            <div class="card-countdown" id="preview-countdown">--d --h --m --s</div>
+            <div class="card-date" id="preview-date">Selecciona una fecha</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary btn-block">Guardar evento</button>
+      </form>
+    </section>
+
+    <!-- ===================== CELEBRATION VIEW ===================== -->
+    <section id="view-celebration" class="view">
+      <div class="celebration-content">
+        <div id="celebration-emoji" class="celebration-emoji">🎉</div>
+        <h1 id="celebration-title">¡Ya llegó el día!</h1>
+        <p id="celebration-name" class="celebration-name"></p>
+        <div class="confetti" id="confetti"></div>
+        <button class="icon-btn back-btn" data-target="view-main">Volver al inicio</button>
       </div>
-    </div>
+    </section>
+
+    <!-- ===================== ARCHIVED VIEW ===================== -->
+    <section id="view-archived" class="view">
+      <header class="topbar">
+        <button class="icon-btn back-btn icon-only" data-target="view-list" aria-label="Volver" data-icon="arrowLeft"></button>
+        <h1 class="logo">Archivados</h1>
+        <span class="icon-btn placeholder"></span>
+      </header>
+
+      <p class="form-hint archived-hint">Los eventos pasados se archivan automáticamente a las 24h y se eliminan a los 30 días de archivados.</p>
+
+      <ul id="archived-list" class="event-list"></ul>
+
+      <div id="archived-empty-state" class="empty-state hidden">
+        <div class="empty-icon-circle empty-icon-circle-muted" data-icon="archive"></div>
+        <p class="empty-title">No hay eventos archivados</p>
+        <p class="empty-subtitle">Aquí aparecerán los eventos pasados que se archiven automáticamente.</p>
+      </div>
+    </section>
 
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- ===================== EXPORT MODAL ===================== -->
+  <div id="modal-export" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Exportar eventos</h2>
+      <p class="modal-hint">Guarda una copia de seguridad de todos tus eventos activos. Puedes importarla en otro dispositivo o en la misma app si reinstalaras.</p>
+      <p id="export-count" class="modal-hint"></p>
+      <div class="modal-actions modal-actions-col">
+        <button id="btn-export-download" class="btn-primary">⬇️ Descargar como archivo .json</button>
+        <button id="btn-export-clipboard" class="btn-secondary">📋 Copiar JSON al portapapeles</button>
+        <button id="btn-export-close" class="btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
-  <script src="app.js"></script>
+  <!-- ===================== PASTE-TO-IMPORT MODAL ===================== -->
+  <div id="modal-paste-import" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Importar eventos</h2>
+      <p class="modal-hint">Pega aquí el enlace o código de un evento compartido, o el JSON de una exportación completa.</p>
+      <textarea id="paste-import-input" class="paste-import-textarea" placeholder="https://...?import=... · código · o JSON de exportación" rows="4"></textarea>
+      <p id="paste-import-error" class="paste-import-error hidden">No hemos podido leer ese contenido. Comprueba que esté completo.</p>
+      <div class="modal-actions">
+        <button id="btn-paste-import-file" class="btn-secondary">📂 Abrir archivo .json</button>
+        <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+      </div>
+      <div class="modal-actions">
+        <button id="btn-paste-import-cancel" class="btn-secondary">Cancelar</button>
+        <button id="btn-paste-import-confirm" class="btn-primary">Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BULK JSON IMPORT MODAL ===================== -->
+  <div id="modal-import-json" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Importar copia de seguridad</h2>
+      <p id="import-json-summary" class="modal-hint"></p>
+      <p class="modal-hint">Los eventos con el mismo ID ya existente se omitirán para no crear duplicados.</p>
+      <div class="modal-actions">
+        <button id="btn-import-json-cancel" class="btn-secondary">Cancelar</button>
+        <button id="btn-import-json-accept" class="btn-primary">Importar todos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== IMPORT MODAL ===================== -->
+  <div id="modal-import" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-emoji" id="import-emoji">⏳</div>
+      <h2 id="import-title">Evento compartido</h2>
+      <p id="import-name" class="modal-name"></p>
+      <p id="import-date" class="modal-date"></p>
+      <div class="modal-actions">
+        <button id="btn-import-cancel" class="btn-secondary">Descartar</button>
+        <button id="btn-import-accept" class="btn-primary">Añadir a mis eventos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SHARE MODAL ===================== -->
+  <div id="modal-share" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Compartir evento</h2>
+      <p class="modal-hint">Cualquier persona que abra este enlace podrá añadir una copia del evento a su propia lista. Si la otra persona tiene la app instalada en iPhone, el enlace puede abrirse en Safari en vez de en la app: puede copiarlo y pegarlo en "Importar evento" dentro de la app para tenerlo ahí también.</p>
+      <div class="share-link-row">
+        <input type="text" id="share-link-input" readonly />
+        <button id="btn-copy-link" class="btn-primary">Copiar</button>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-share-native" class="btn-secondary hidden">Compartir…</button>
+        <button id="btn-share-close" class="btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MISSED RECURRING EVENTS BANNER ===================== -->
+  <div id="modal-missed-recurring" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Mientras no abrías la app…</h2>
+      <p class="modal-hint">Llegó el día de estos eventos recurrentes:</p>
+      <ul id="missed-recurring-list" class="missed-recurring-list"></ul>
+      <div class="modal-actions">
+        <button id="btn-missed-recurring-close" class="btn-primary">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/icons.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/countdown.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
