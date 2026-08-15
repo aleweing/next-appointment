@@ -1,145 +1,112 @@
-# ⏳ Next Appointment
+# Mesa
 
-Aplicación web PWA de countdown donde el usuario crea sus propios eventos con nombre, fecha, hora, emoji, color, categoría y recurrencia. Una pantalla para cualquier cosa que estés esperando.
-
-## Concepto
-Sin registro, sin anuncios, funciona offline. Bodas, viajes, cumpleaños, estrenos, exámenes — cualquier cosa.
-
-## Stack tecnológico
-- HTML5 / CSS3 / JavaScript vanilla (sin frameworks)
-- localStorage para todos los datos
-- PWA (manifest + service worker) para instalación offline
-- Iconos SVG inline propios (estilo Tabler, sin dependencias externas)
+Cuaderno personal de restaurantes: guarda dónde comiste, qué platos te gustaron
+(y cuáles no), notas para la próxima visita, fotos, dirección con enlace a
+Google/Apple Maps y teléfono de contacto para reservar. Todo opcional salvo el
+nombre.
 
 ## Arquitectura
-```
-100% cliente — sin backend, sin APIs externas
-localStorage → persistencia de eventos
-Service Worker (network-first para JS/CSS/HTML) → uso offline
-```
 
-## Estructura de archivos
-```
-next-appointment/
-├── index.html              # 5 vistas: main, lista, formulario, celebración, archivados
-├── manifest.json
-├── service-worker.js       # Cache v13, network-first para assets de código
-├── css/
-│   └── styles.css
-├── js/
-│   ├── icons.js            # ⚠️ SVG inline de todos los iconos de interfaz
-│   ├── storage.js          # localStorage: eventos, tema, sort, onboarding, lastSeen
-│   ├── countdown.js        # Lógica de cuenta atrás y recurrencia
-│   ├── ui.js               # ⚠️ CATEGORIES aquí: renderizado de vistas y componentes
-│   └── app.js              # Lógica principal, navegación, tick optimizado
-└── icons/
-    ├── icon-192.png
-    └── icon-512.png
-```
+- **Frontend**: PWA en vanilla JS, pensada para GitHub Pages (mismo patrón que
+  Next Trip / Next Show / Next Match).
+- **Backend**: un único Cloudflare Worker (`worker/worker.js`) que expone la API.
+- **Datos**: Cloudflare D1 (SQL) para restaurantes/platos, Cloudflare R2 para fotos.
+- **Auth**: una clave privada simple (`X-API-Key`) — suficiente para empezar;
+  el modelo de datos ya está pensado por-usuario para poder añadir cuentas
+  reales el día que quieras abrirlo a más gente.
 
-## Funcionalidades implementadas
+## 1. Desplegar el backend (Cloudflare)
 
-### Eventos
-- Crear, editar y eliminar eventos con: nombre, fecha, hora, emoji, color de acento, categoría
-- Countdown en vivo (días/horas/min/seg), actualizado cada segundo
-- Recurrencia configurable: cada X días / semanas / meses / años
-- Aviso configurable: X días/horas/min antes (solo si la app está abierta)
-- Retrocompatibilidad con tres formatos antiguos de recurrencia
+Necesitas una cuenta gratuita de Cloudflare.
 
-### Categorías
-- ⚠️ **Único lugar a editar**: `js/ui.js`, constante `CATEGORIES`
-- Actuales: Cumpleaños, Salud, Fiestas, Ferias, Festivales, Viajes, Otros
-- Cada categoría: `{ id, label, emoji }` — el `id` no debe cambiarse una vez en uso
+1. Entra en el [dashboard de Cloudflare](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Worker**.
+2. Ponle nombre `mesa-api` y despliega el worker por defecto.
+3. Ve a **Storage & Databases** → **D1** → **Create database**, llámala `mesa-db`.
+4. Dentro de la base de datos, pestaña **Console**, pega el contenido de
+   `worker/schema.sql` y ejecútalo (crea las tablas).
+5. Ve a **R2** → **Create bucket**, llámalo `mesa-photos`.
+6. Vuelve a tu Worker `mesa-api` → **Settings** → **Bindings**:
+   - Añade un binding D1: variable `DB` → base de datos `mesa-db`.
+   - Añade un binding R2: variable `PHOTOS` → bucket `mesa-photos`.
+   - Añade un **secret** (Variables and Secrets → Add): `API_KEY` con una clave
+     inventada por ti (guárdala, la necesitarás en la app).
+7. Ve a **Settings** → **Editor** (o sube el código): reemplaza el contenido
+   del Worker por el de `worker/worker.js` de este proyecto y guarda/despliega.
+8. Copia la URL pública de tu Worker (algo como
+   `https://mesa-api.tuusuario.workers.dev`) — la necesitas en el paso 3.
 
-### Carrusel principal
-- Swipe nativo vía CSS scroll-snap — sin JS de touch (solución canónica, no revertir)
-- Tick optimizado: solo actualiza la card visible
+*(Alternativa más rápida si usas la CLI `wrangler` desde tu ordenador:
+`wrangler d1 execute mesa-db --file=worker/schema.sql`,
+`wrangler deploy` usando el `wrangler.toml` incluido, tras rellenar el
+`database_id` real de tu base D1.)*
 
-### Vista "Mis eventos"
-- Buscador en vivo por nombre (insensible a mayúsculas y acentos)
-- Chips de ordenación y filtro por categoría (combinables)
+## 2. Publicar el frontend (GitHub Pages)
 
-### Archivado automático
-- Eventos NO recurrentes pasados hace ≥24h → se archivan
-- Archivados hace ≥30 días → se eliminan definitivamente
-- Vista "Archivados" con botón de restaurar
+1. Crea un repositorio nuevo en GitHub, por ejemplo `mesa`.
+2. Sube todos los archivos de la carpeta raíz (`index.html`, `style.css`,
+   `app.js`, `manifest.json`, `service-worker.js`, `icon-192.png`,
+   `icon-512.png`) — **no** subas la carpeta `worker/`, esa vive solo en
+   Cloudflare.
+3. En el repo, ve a **Settings** → **Pages** → Source: rama `main`, carpeta `/root`.
+4. En un minuto tendrás tu app en `https://tuusuario.github.io/mesa/`.
 
-### Exportar e importar (copia de seguridad)
-- **Exportar** (botón ⬆️ en "Mis eventos"): genera un archivo `.json` con todos los eventos activos o lo copia al portapapeles. Útil antes de reinstalar la PWA o cambiar de dispositivo.
-- **Importar** (botón ⬇️ en "Mis eventos"): acepta tres formatos:
-  - Enlace compartido (`?import=...`) o código base64 — flujo individual existente
-  - JSON pegado directamente en el textarea — importación masiva
-  - Archivo `.json` seleccionado desde el explorador de archivos — importación masiva
-- La importación masiva muestra un resumen (eventos nuevos vs. duplicados omitidos) antes de confirmar. Los duplicados se detectan por `id` y se omiten silenciosamente.
-- Formato del archivo de exportación:
-```json
-{
-  "version": 1,
-  "app": "next-appointment",
-  "events": [ ... ]
-}
-```
+## 3. Primer uso
 
-### Compartir evento individual
-- Link con evento codificado en base64 (`?import=...`)
-- Si la otra persona tiene la PWA instalada en iOS, puede pegar el enlace en "Importar"
+1. Abre la URL de GitHub Pages en tu iPhone.
+2. La app te pedirá la **URL del Worker** (paso 1.8) y la **clave** (`API_KEY`
+   del paso 1.6). Se guardan solo en tu móvil (localStorage), no viajan a
+   ningún otro sitio salvo tu propio Worker.
+3. Toca **Compartir → Añadir a pantalla de inicio** para instalarla como app.
 
-### Onboarding
-- Primera apertura: evento de ejemplo con botón "Crear mi propio evento"
-- Flag en localStorage — nunca vuelve a aparecer
+## Cómo funciona
 
-### Modo rápido de creación
-- Formulario: solo nombre + fecha + hora visibles por defecto
-- "Más opciones" despliega el resto
+- **Dirección**: se guarda como texto libre y se enlaza directamente a
+  `https://www.google.com/maps/search/?api=1?query=...`, que en iOS abre la
+  app de Maps si está instalada.
+- **Teléfono**: enlace `tel:` para llamar y reservar con un toque.
+- **Platos**: cada uno lleva un "sello" — SÍ (te gustó), NO (no te gustó) o
+  sin valorar — más una nota libre (ideal para cosas tipo "para mi hija: solo
+  arroz con pollo").
+- **Fotos**: se suben directamente a Cloudflare R2 desde el móvil. Hay dos
+  tipos: **generales** del restaurante (fachada, menú, la cuenta de cada
+  visita...) y **por plato** — cada plato tiene su propio botón 📷 para
+  adjuntarle fotos, independientes de las generales.
 
-### Avisos de eventos recurrentes cumplidos
-- Banner-resumen al abrir/volver a la app con eventos recurrentes cumplidos en el intervalo cerrado
-- Umbral mínimo: 1 minuto (evita dispararse en recargas normales)
+## Añadir fotos por plato a una instalación ya existente
 
-### PWA / Offline
-- `touch-action: manipulation` bloquea zoom accidental sin afectar accesibilidad
-- Service Worker v13, network-first para HTML/CSS/JS
-- Icono: arco de cuenta atrás + calendario (azul #0984e3)
+Si ya desplegaste Mesa antes de esta función, ejecuta una vez en la consola
+de D1 el contenido de `worker/migration-fotos-plato.sql`, y sube el
+`worker.js` actualizado. No hace falta tocar nada más — las fotos que ya
+tenías se siguen mostrando como generales.
 
-## Modelo de datos
+## Añadir un segundo usuario (cuadernos separados, con opción de compartir)
 
-```js
-{
-  id: 'evt_xxx',
-  name: 'Viaje a Japón',
-  date: '2026-09-01',
-  time: '08:00',
-  emoji: '✈️',
-  color: '#0984e3',
-  category: 'travel',
-  recurrenceUnit: 'none',       // 'none'|'day'|'week'|'month'|'year'
-  recurrenceInterval: 1,
-  notifyBefore: 3600,           // segundos, o null
-  archivedAt: null,             // timestamp ms, o null
-  isOnboardingExample: false,
-  _celebrated: false,
-  _notifiedKey: null,
-}
-```
+Cada persona tiene su propio cuaderno privado por defecto. Al crear o editar
+un restaurante, puede marcarlo como "Compartir con el otro usuario" para que
+también le aparezca a la otra persona (en modo solo lectura).
 
-## Claves de localStorage
-| Clave | Contenido |
-|---|---|
-| `next-appointment:events` | Array JSON de todos los eventos |
-| `next-appointment:theme` | `'light'` \| `'dark'` |
-| `next-appointment:sort` | Modo de orden de la lista |
-| `next-appointment:onboarding-seen` | `'true'` si ya se vio el ejemplo |
-| `next-appointment:last-seen` | Timestamp de la última apertura |
+1. **Migra la base de datos**: en el dashboard, ve a D1 → `mesa-db` → Console,
+   y ejecuta el contenido de `worker/migration-2-usuarios.sql`. Antes de
+   ejecutarlo, cambia `'alejandro'` por el identificador que quieras usar
+   para tus restaurantes ya guardados (todos se asignarán a ese nombre).
+2. **Sustituye el secret `API_KEY` por `USERS`**: en Settings → Variables and
+   Secrets de tu Worker, borra el secret `API_KEY` y añade uno nuevo llamado
+   `USERS` de tipo Secret, con este contenido (en una sola línea, JSON válido):
+   ```
+   {"clave-privada-de-alejandro":"alejandro","clave-privada-del-otro":"otronombre"}
+   ```
+   Cada persona usa su propia clave (inventa una distinta para cada una,
+   igual que hiciste con la primera) como valor de `X-API-Key` — es decir,
+   como la "clave de acceso" que introduce en la app.
+3. **Sube el `worker.js` actualizado** (ya incluido en este proyecto) — ahora
+   filtra los restaurantes por dueño y solo deja editar/borrar/añadir platos
+   y fotos al dueño de cada entrada.
+4. **En el móvil de la otra persona**, que instale la PWA con la misma URL
+   del Worker pero con su propia clave.
 
-## Despliegue
-GitHub Pages (rama main, carpeta raíz). URL: `https://aleweing.github.io/next-appointment/`
+## Siguientes pasos si quieres escalarla más allá de 2 personas
 
-**Importante**: siempre subir el zip completo sobrescribiendo todos los archivos — nunca archivos sueltos.
-
-## Decisiones técnicas clave
-- **Swipe**: 100% CSS scroll-snap, sin JS de touch. No revertir.
-- **Service Worker**: network-first para código, cache-first para imágenes. Versión actual: `v13`. Incrementar en cada deploy que modifique JS/CSS/HTML.
-- **Iconos de interfaz**: SVG inline en `js/icons.js`, `setIcon(el, iconName)`. Los emojis de eventos/categorías se mantienen como emoji.
-- **Recurrencia**: `recurrenceUnit` + `recurrenceInterval`. `Countdown.getRecurrence(event)` normaliza los tres formatos históricos.
-- **Exportación/importación masiva**: el enrutador `_handleImportText(text)` decide si el texto es JSON de exportación (`app === 'next-appointment'`) o enlace/código individual. Añadir nuevos formatos de importación aquí.
-- **Icono PWA en iOS**: el icono se fija en el momento de instalar la PWA. Para actualizarlo hay que desinstalar y volver a añadir a pantalla de inicio. Exportar antes para no perder datos.
+- Sustituir el JSON de `USERS` por login real por email (magic link) si
+  necesitas más de un par de usuarios o quieres que se registren solos.
+- Explorar cobrar una versión "Pro" (fotos ilimitadas, exportar a PDF, etc.)
+  si decides convertirlo en un producto de verdad.
