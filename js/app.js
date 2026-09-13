@@ -488,6 +488,14 @@ const App = {
       const recurrence = Countdown.getRecurrence(event);
       if (recurrence.unit === 'none') return;
 
+      // Ancla real: la primera ocurrencia tal como la introdujo el usuario,
+      // sin el auto-avance de Countdown.getTargetDate.
+      const anchor = new Date(`${event.date}T${event.time || '00:00'}:00`);
+      
+      // Si la primera ocurrencia todavía no ha llegado, no puede existir
+      // ninguna ocurrencia "perdida" todavía.
+      if (anchor.getTime() > now) return;
+       
       // Partimos de la fecha original del evento y avanzamos hasta encontrar
       // la primera ocurrencia que cae dentro de la ventana (lastSeen, now].
       // Límite de retroceso: empezamos desde la ocurrencia anterior a now
@@ -499,11 +507,13 @@ const App = {
       );
 
       // Retroceder lo suficiente para cubrir toda la ventana
-      let guard = 0;
-      while (start.getTime() > lastSeen && guard < 10000) {
-        start = this.subtractRecurrence(start, recurrence.unit, recurrence.interval);
-        guard++;
-      }
+    let guard = 0;
+    while (start.getTime() > lastSeen && start.getTime() > anchor.getTime() && guard < 10000) {
+      start = this.subtractRecurrence(start, recurrence.unit, recurrence.interval);
+      guard++;
+    }
+    // Nunca retroceder más allá del ancla real
+    if (start.getTime() < anchor.getTime()) start = new Date(anchor);
 
       // Avanzar desde start, recogiendo todas las ocurrencias en (lastSeen, now]
       let check = Countdown.advanceByRecurrence(start, recurrence.unit, recurrence.interval);
