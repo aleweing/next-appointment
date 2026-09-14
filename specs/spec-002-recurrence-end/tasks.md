@@ -1,9 +1,9 @@
 # Plan de Tareas: Fin de recurrencia (Feature 002)
 
-**Feature Branch**: `002-recurrence-end`  
-**Spec relacionada**: `spec.md` (misma carpeta)  
-**Plan técnico**: `plan.md` (misma carpeta)  
-**Estado**: Borrador  
+**Feature Branch**: `002-recurrence-end`
+**Spec relacionada**: `spec.md` (misma carpeta)
+**Plan técnico**: `plan.md` (misma carpeta)
+**Estado**: Borrador — v2, corrige TASK-002-001/002/003 (ver nota al final)
 **Total de tareas**: 12 (P1: 7, P2: 5)
 
 ---
@@ -12,36 +12,62 @@
 
 ### TASK-002-001: Extender modelo de datos en Storage
 
-**Descripción**: Agregar los campos `recurrenceEndDate`, `recurrenceMaxCount` y `recurrenceOccurrenceCount` al objeto evento, con retrocompatibilidad.
+**Descripción**: Agregar los campos `recurrenceEndDate` y `recurrenceMaxCount` al objeto evento, con retrocompatibilidad. **No se agrega ningún contador de ocurrencias**: las repeticiones transcurridas se calculan siempre a partir de la fecha ancla del evento (`event.date` + `event.time`), nunca se guardan ni se incrementan. Esto evita depender de que algún punto del código recuerde sumar +1 en el momento correcto.
 
 **Criterios de aceptación**:
 1. Todos los eventos existentes sin estos campos se comportan como hoy (sin límite)
 2. Nuevos eventos pueden incluir opcionalmente `recurrenceEndDate` (string YYYY-MM-DD) o `recurrenceMaxCount` (número entero)
-3. El contador `recurrenceOccurrenceCount` inicia en 0 y se puede incrementar
-4. `Storage.upsert()` y `Storage.saveAll()` persisten estos campos sin error
-5. Al importar JSON antiguo, los campos faltantes se asignan a `null` automáticamente
+3. `Storage.upsert()` y `Storage.saveAll()` persisten estos dos campos sin error
+4. Al importar JSON antiguo, los campos faltantes se asignan a `null` automáticamente
+5. El objeto evento NO incluye ningún campo de tipo contador (`recurrenceOccurrenceCount` u otro) — el conteo de repeticiones nunca se persiste
 
 **Archivos a modificar**:
 - `js/storage.js` — extender modelo en comentarios y ejemplos
-- `js/app.js` — asegurar que `handleSubmit()` incluya estos campos
+- `js/app.js` — asegurar que `handleSubmit()` incluya estos dos campos
 
 **Definición de listo**:
 - ✅ localStorage contiene los nuevos campos
 - ✅ Evento sin límite: se carga sin cambios
 - ✅ Evento con límite: se persiste y recarga correctamente
+- ✅ No existe ningún campo de contador en el objeto guardado
 
 ---
 
 ### TASK-002-002: Función `isRecurrenceFinished()` en Countdown
 
-**Descripción**: Nueva función que determina si una serie recurrente ha alcanzado su límite (por conteo o fecha).
+**Descripción**: Nueva función que determina si una serie recurrente ha alcanzado su límite (por conteo o por fecha), calculando las repeticiones transcurridas de forma derivada — sin leer ningún contador guardado.
+
+**Lógica**:
+```js
+function isRecurrenceFinished(event) {
+  const { unit, interval, endDate, maxCount } = getRecurrence(event);
+  if (!maxCount && !endDate) return false;
+
+  const anchor = new Date(`${event.date}T${event.time || '00:00'}:00`);
+
+  if (maxCount) {
+    const intervalMs = intervalToMs(unit, interval); // helper ya usado en el módulo
+    const occurrencesSoFar = Math.floor((Date.now() - anchor.getTime()) / intervalMs) + 1;
+    if (occurrencesSoFar >= maxCount) return true;
+  }
+
+  if (endDate) {
+    const end = new Date(`${endDate}T23:59:59`);
+    const next = advanceByRecurrence(getTargetDate(event, { ignoreLimit: true }), unit, interval);
+    if (next.getTime() > end.getTime()) return true;
+  }
+
+  return false;
+}
+```
+(Nombres de variables orientativos — ajustar a las convenciones ya usadas en `countdown.js`. La idea central es la fórmula de `occurrencesSoFar` a partir de `anchor`, sin ningún estado guardado.)
 
 **Criterios de aceptación**:
 1. `isRecurrenceFinished(event)` devuelve `false` si `recurrenceMaxCount` y `recurrenceEndDate` son ambos `null` (indefinido)
-2. Devuelve `true` si `recurrenceOccurrenceCount >= recurrenceMaxCount` (cuando maxCount está definido)
-3. Devuelve `true` si la próxima ocurrencia calculada superaría `recurrenceEndDate` (cuando endDate está definido)
+2. Devuelve `true` cuando las repeticiones transcurridas calculadas desde `anchor` (fecha+hora originales del evento) alcanzan o superan `recurrenceMaxCount`
+3. Devuelve `true` si la próxima ocurrencia calculada superaría `recurrenceEndDate`
 4. Si ambos límites están definidos, devuelve `true` cuando se cumpla **cualquiera** de los dos (lógica OR)
-5. No modifica el estado del evento, solo consulta
+5. Es una función pura: mismos inputs (evento + hora actual) siempre producen el mismo resultado; no lee ni escribe ningún campo de contador porque no existe
 
 **Archivos a modificar**:
 - `js/countdown.js` — nueva función `isRecurrenceFinished(event)`
@@ -49,20 +75,21 @@
 **Definición de listo**:
 - ✅ Función creada y exportada
 - ✅ Test manual: evento sin límite → false
-- ✅ Test manual: evento con 3 repeticiones, conteo=3 → true
+- ✅ Test manual: evento semanal con `maxCount=3`, hoy es exactamente 3 intervalos después del ancla → true
 - ✅ Test manual: evento con fecha fin 2026-09-15, siguiente ocurrencia 2026-09-20 → true
+- ✅ Test manual: evento futuro (ancla no ha llegado aún) con `maxCount=1` → false (todavía no hubo ninguna ocurrencia)
 
 ---
 
 ### TASK-002-003: Modificar `Countdown.getTargetDate()` para respetar límites
 
-**Descripción**: Adaptar la función existente para dejar de calcular nuevas ocurrencias cuando se alcanza un límite.
+**Descripción**: Adaptar la función existente para dejar de calcular nuevas ocurrencias cuando se alcanza un límite, usando `isRecurrenceFinished()` (sin ningún contador guardado de por medio).
 
 **Criterios de aceptación**:
-1. Si `isRecurrenceFinished(event)` es true, devolver la última ocurrencia válida (antes de que se exceda el límite)
+1. Si `isRecurrenceFinished(event)` es true, devolver la última ocurrencia válida (la calculada antes de que se exceda el límite), sin seguir avanzando
 2. Si es false, comportarse como hoy (avanzar sin límite)
 3. La retrocompatibilidad se mantiene: eventos sin límite siguen avanzando indefinidamente
-4. No se modifica el estado del evento, solo se calcula la fecha de retorno
+4. La función sigue sin modificar el estado del evento — sigue siendo de solo cálculo, ahora también respecto al límite
 
 **Archivos a modificar**:
 - `js/countdown.js` — lógica dentro de `getTargetDate(event)`
@@ -71,6 +98,7 @@
 - ✅ Evento semanal con 3 repeticiones: la 3ª ocurrencia es válida, no hay 4ª
 - ✅ Evento anual sin límite: sigue calculando años futuros
 - ✅ Evento con fecha fin: nunca avanza más allá de esa fecha
+- ✅ Llamar `getTargetDate()` repetidas veces sobre el mismo evento finalizado siempre devuelve la misma fecha (comportamiento estable, sin dependencia de cuántas veces se llamó antes)
 
 ---
 
@@ -151,6 +179,7 @@
 3. No esperar 24h como con eventos no recurrentes (una serie terminada es archivable al instante)
 4. Verificar que eventos recurrentes sin límite no se afecten
 5. Reutilizar `Storage.archive(id)` existente
+6. **Verificar que archivar una serie finalizada no dispara `checkCelebrations()` sobre ese evento** — `checkCelebrations` ya excluye eventos recurrentes (`unit !== 'none'` → return), confirmar que esa exclusión sigue aplicando también cuando el evento pasa a estar archivado por límite, y no se cuela ninguna celebración fuera de lugar en la última ocurrencia
 
 **Archivos a modificar**:
 - `js/app.js` — lógica dentro de `runArchiveMaintenance()` (líneas ~438–469)
@@ -159,6 +188,7 @@
 - ✅ Serie con 2 repeticiones (ambas pasadas): se archiva automáticamente
 - ✅ Serie semanal sin límite: permanece activa
 - ✅ Ejecutar `runArchiveMaintenance()` múltiples veces: no re-archiva ni causa errores
+- ✅ Ninguna celebración se dispara al archivar una serie finalizada
 
 ---
 
@@ -234,7 +264,7 @@
    - Aumentar `recurrenceMaxCount` o mover `recurrenceEndDate` hacia el futuro
    - Dejar los campos vacíos para eliminar el límite
 3. Al guardar, el evento se des-archiva automáticamente (reutilizar `Storage.unarchive()`)
-4. Si el evento se re-activa, `Countdown.getTargetDate()` calcula la próxima ocurrencia correctamente
+4. Si el evento se re-activa, `Countdown.getTargetDate()` calcula la próxima ocurrencia correctamente (recordar: se recalcula siempre desde `anchor`, así que no hace falta "resetear" ningún contador — no existe)
 
 **Archivos a modificar**:
 - `js/app.js` — en `handleSubmit()`, si el evento estaba archivado, llamar `Storage.unarchive(id)` después de guardar
@@ -271,12 +301,12 @@
 ## 📊 Matriz de Dependencias
 
 ```
-TASK-002-001 (Modelo datos)
+TASK-002-001 (Modelo datos, sin contador)
     ↓
-TASK-002-002 (isRecurrenceFinished)
+TASK-002-002 (isRecurrenceFinished, cálculo derivado desde anchor)
     ↓
 TASK-002-003 (Modificar getTargetDate)
-    ├──→ TASK-002-007 (Archivar en maintenance)
+    ├──→ TASK-002-007 (Archivar en maintenance + chequeo de celebraciones)
     ├──→ TASK-002-009 (Preview)
     └──→ TASK-002-010 (checkMissedRecurringEvents)
 
@@ -294,17 +324,15 @@ TASK-002-008 (Etiqueta en cards)
 
 ## 🧪 Test Coverage
 
-Cada tarea debe incluir test manual:
-
 | Task | Test Manual |
 |------|-------------|
-| 002-001 | Crear evento, guardar, recargar → campos persisten |
-| 002-002 | Llamar función con evento sin límite (false) y con límite (true) |
-| 002-003 | Evento semanal 3 reps: getTargetDate nunca devuelve ocurrencia 4 |
+| 002-001 | Crear evento, guardar, recargar → campos persisten; no aparece ningún contador en el JSON guardado |
+| 002-002 | Evento sin límite → false. Evento semanal `maxCount=3`, hoy = ancla + 3 intervalos → true. Evento futuro con `maxCount=1` → false |
+| 002-003 | Evento semanal 3 reps: `getTargetDate` nunca devuelve ocurrencia 4, en ninguna llamada repetida |
 | 002-004 | Abrir formulario de creación → inputs aparecen dentro de repeat-row |
 | 002-005 | Llenar límites, guardar → Storage contiene valores |
 | 002-006 | Editar evento con límite → campos pre-rellenados |
-| 002-007 | Crear evento 2 reps, esperar a que ambas pasen → archivado auto |
+| 002-007 | Crear evento 2 reps, esperar a que ambas pasen → archivado auto, sin celebración disparada |
 | 002-008 | Card muestra "🔁 Cada 7d · 3 reps" o "hasta 30-11" |
 | 002-009 | Preview del formulario muestra límite en texto |
 | 002-010 | Evento 3 reps: app cerrada 4 semanas → no reporta ocurrencia 4 |
@@ -315,8 +343,8 @@ Cada tarea debe incluir test manual:
 
 ## 📝 Notas Finales
 
+- **Cambio respecto a la v1**: se eliminó `recurrenceOccurrenceCount` como campo guardado. La v1 lo introducía pero ninguna tarea definía dónde incrementarlo, y no había un punto seguro para hacerlo sin duplicar el conteo (`getTargetDate` es pura, `checkMissedRecurringEvents` solo corre con la app cerrada). La v2 calcula las repeticiones transcurridas siempre a partir de `anchor` (fecha+hora original del evento) y la hora actual, sin ningún estado intermedio que mantener sincronizado.
 - **Orden recomendado de ejecución**: 001 → 002 → 003 → 004/005/006 → 007/008/009/010 → 011/012
 - **Estimación**: ~8–10 horas (depende de familiaridad con codebase)
 - **Revisión**: Verificar que eventos existentes sin límite no cambien comportamiento
 - **Regression**: Ejecutar todas las pruebas del feature 001 tras cada cambio
-
