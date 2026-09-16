@@ -628,6 +628,47 @@ input:focus, select:focus {
   flex: 1;
 }
 
+.repeat-limit-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.repeat-limit-row[hidden] {
+  display: none;
+}
+
+.repeat-limit-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repeat-limit-field label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.repeat-limit-field input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 10px;
+  font-size: 1rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.repeat-limit-field input[type="number"]::-webkit-outer-spin-button,
+.repeat-limit-field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .checkbox-group {
   flex-direction: row;
   align-items: center;
