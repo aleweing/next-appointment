@@ -12,19 +12,88 @@ const Countdown = {
    * @returns {{unit: 'none'|'day'|'week'|'month'|'year', interval: number}}
    */
   getRecurrence(event) {
+    // Límites opcionales de fin de serie (feature 002). Ausentes o nulos
+    // en todos los eventos anteriores: serie indefinida, como siempre.
+    const endDate = event.recurrenceEndDate || null;
+    const rawMax = parseInt(event.recurrenceMaxCount, 10);
+    const maxCount = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : null;
+
     if (event.recurrenceUnit) {
       return {
         unit: event.recurrenceUnit,
         interval: Math.max(1, parseInt(event.recurrenceInterval, 10) || 1),
+        endDate,
+        maxCount,
       };
     }
     // Formato intermedio: 'daily'|'weekly'|'monthly'|'yearly'|'none'
     if (event.recurrence) {
       const LEGACY_MAP = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year', none: 'none' };
-      return { unit: LEGACY_MAP[event.recurrence] || 'none', interval: 1 };
+      return { unit: LEGACY_MAP[event.recurrence] || 'none', interval: 1, endDate, maxCount };
     }
     // Formato más antiguo: checkbox booleano
-    return { unit: event.recurring ? 'year' : 'none', interval: 1 };
+    return { unit: event.recurring ? 'year' : 'none', interval: 1, endDate, maxCount };
+  },
+
+  /**
+   * Devuelve el ancla de la serie: la primera ocurrencia tal como la
+   * introdujo el usuario, sin ningún auto-avance.
+   * @param {Object} event
+   * @returns {Date}
+   */
+  getAnchorDate(event) {
+    return new Date(`${event.date}T${event.time || '00:00'}:00`);
+  },
+
+  /**
+   * Calcula la ÚLTIMA ocurrencia válida de una serie recurrente limitada.
+   * Devuelve null si el evento no es recurrente o si la serie es indefinida
+   * (sin fecha de fin ni número máximo de repeticiones).
+   *
+   * El conteo de repeticiones NO se guarda en ningún campo: se deriva
+   * siempre avanzando desde el ancla con la misma función que usa el resto
+   * del countdown, así que es exacto también para meses y años (que no
+   * tienen una duración fija en milisegundos).
+   *
+   * Si están definidos los dos límites, gana el que se cumpla primero:
+   * el bucle se detiene en cuanto cualquiera de los dos se alcanza.
+   * @param {Object} event
+   * @returns {Date|null}
+   */
+  getLastOccurrence(event) {
+    const { unit, interval, endDate, maxCount } = this.getRecurrence(event);
+    if (unit === 'none') return null;
+    if (!endDate && !maxCount) return null; // serie indefinida
+
+    const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
+    const max = maxCount || Infinity;
+
+    let last = this.getAnchorDate(event); // la 1ª ocurrencia siempre existe
+    let count = 1;
+    let guard = 0;
+
+    while (count < max && guard < 100000) {
+      const next = this.advanceByRecurrence(last, unit, interval);
+      if (end && next.getTime() > end.getTime()) break; // gana la fecha de fin
+      last = next;
+      count++;
+      guard++;
+    }
+
+    return last;
+  },
+
+  /**
+   * Indica si una serie recurrente ya agotó su límite (por número de
+   * repeticiones o por fecha de fin). Función pura: no lee ni escribe
+   * ningún contador, solo calcula a partir del ancla y la hora actual.
+   * @param {Object} event
+   * @returns {boolean}
+   */
+  isRecurrenceFinished(event) {
+    const last = this.getLastOccurrence(event);
+    if (!last) return false; // sin límite configurado
+    return Date.now() > last.getTime();
   },
 
   /**
@@ -34,13 +103,16 @@ const Countdown = {
    * @returns {Date}
    */
   getTargetDate(event) {
-    let target = new Date(`${event.date}T${event.time || '00:00'}:00`);
+    let target = this.getAnchorDate(event);
     const { unit, interval } = this.getRecurrence(event);
 
     if (unit !== 'none') {
+      const last = this.getLastOccurrence(event); // null si la serie es indefinida
       const now = new Date();
       let guard = 0; // evita bucles infinitos ante fechas corruptas
       while (target.getTime() <= now.getTime() && guard < 100000) {
+        // Serie limitada: no avanzar más allá de la última ocurrencia válida.
+        if (last && target.getTime() >= last.getTime()) break;
         target = this.advanceByRecurrence(target, unit, interval);
         guard++;
       }
@@ -108,7 +180,11 @@ const Countdown = {
    * @param {Object} event
    */
   hasElapsed(event) {
-    if (this.getRecurrence(event).unit !== 'none') return false;
+    if (this.getRecurrence(event).unit !== 'none') {
+      // Una serie indefinida nunca "llega": su countdown siempre apunta al
+      // futuro. Una serie limitada sí, cuando pasa su última ocurrencia.
+      return this.isRecurrenceFinished(event);
+    }
     return this.diffMs(event) <= 0;
   },
 

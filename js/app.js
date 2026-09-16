@@ -95,6 +95,8 @@ const App = {
     });
     document.getElementById('event-recurrence-interval').addEventListener('input', () => this.updatePreview());
     document.getElementById('event-recurrence-unit').addEventListener('change', () => this.updatePreview());
+    document.getElementById('event-recurrence-end-date').addEventListener('change', () => this.updatePreview());
+    document.getElementById('event-recurrence-max-count').addEventListener('input', () => this.updatePreview());
 
     // Share modal
     document.getElementById('btn-copy-link').addEventListener('click', () => this.copyShareLink());
@@ -432,8 +434,10 @@ const App = {
    * Mantenimiento de archivado automático, se ejecuta al abrir la app:
    * - Archiva eventos NO recurrentes cuya fecha/hora pasó hace 24h o más.
    * - Elimina definitivamente eventos archivados hace 30 días o más.
-   * Los eventos recurrentes nunca se archivan (su countdown siempre
-   * apunta al futuro, así que Countdown.hasElapsed() nunca es true para ellos).
+   * - Archiva al instante las series recurrentes que agotaron su límite
+   *   (fecha de fin o número máximo de repeticiones).
+   * Las series recurrentes sin límite nunca se archivan: su countdown
+   * siempre apunta al futuro.
    */
   runArchiveMaintenance() {
     const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000; // 24 horas
@@ -453,9 +457,21 @@ const App = {
         return;
       }
 
-      // No archivado: ¿toca archivarlo? (solo eventos no recurrentes ya pasados)
+      // No archivado: ¿toca archivarlo?
       if (event.isOnboardingExample) return; // el ejemplo no se archiva solo
-      if (Countdown.getRecurrence(event).unit !== 'none') return;
+
+      // Serie recurrente: solo se archiva si llegó a su límite (feature 002),
+      // y en ese caso al instante, sin esperar las 24h de los no recurrentes.
+      // Nota: checkCelebrations ignora cualquier evento recurrente, así que
+      // archivar aquí nunca dispara una celebración fuera de lugar.
+      if (Countdown.getRecurrence(event).unit !== 'none') {
+        if (Countdown.isRecurrenceFinished(event)) {
+          Storage.archive(event.id);
+          changed = true;
+        }
+        return;
+      }
+
       if (!Countdown.hasElapsed(event)) return;
 
       const elapsedMs = now - Countdown.getTargetDate(event).getTime();
@@ -515,11 +531,16 @@ const App = {
     // Nunca retroceder más allá del ancla real
     if (start.getTime() < anchor.getTime()) start = new Date(anchor);
 
+      // Tope superior: si la serie tiene límite, no existen ocurrencias
+      // más allá de su última fecha válida (feature 002).
+      const lastOccurrence = Countdown.getLastOccurrence(event);
+
       // Avanzar desde start, recogiendo todas las ocurrencias en (lastSeen, now]
       let check = Countdown.advanceByRecurrence(start, recurrence.unit, recurrence.interval);
       const fired = [];
       guard = 0;
       while (check.getTime() <= now && guard < 1000) {
+        if (lastOccurrence && check.getTime() > lastOccurrence.getTime()) break;
         if (check.getTime() > lastSeen) fired.push(new Date(check));
         check = Countdown.advanceByRecurrence(check, recurrence.unit, recurrence.interval);
         guard++;
@@ -625,6 +646,8 @@ const App = {
     document.getElementById('event-repeat-toggle').checked = false;
     document.getElementById('event-recurrence-interval').value = 1;
     document.getElementById('event-recurrence-unit').value = 'year';
+    document.getElementById('event-recurrence-end-date').value = '';
+    document.getElementById('event-recurrence-max-count').value = '';
     this.toggleRepeatRow(false);
     document.getElementById('event-notify-days').value = 0;
     document.getElementById('event-notify-hours').value = 0;
@@ -661,12 +684,16 @@ const App = {
     document.getElementById('event-color').value = event.color || COLOR_OPTIONS[0];
     document.getElementById('event-category').value = event.category || DEFAULT_CATEGORY_ID;
 
-    const { unit, interval } = Countdown.getRecurrence(event);
+    const { unit, interval, endDate, maxCount } = Countdown.getRecurrence(event);
     const repeats = unit !== 'none';
     document.getElementById('event-repeat-toggle').checked = repeats;
     document.getElementById('event-recurrence-interval').value = interval;
     document.getElementById('event-recurrence-unit').value = repeats ? unit : 'year';
-    this.toggleRepeatRow(repeats);
+    this.toggleRepeatRow(repeats); // limpia los límites si no repite
+    if (repeats) {
+      document.getElementById('event-recurrence-end-date').value = endDate || '';
+      document.getElementById('event-recurrence-max-count').value = maxCount || '';
+    }
 
     const notifySeconds = Number(event.notifyBefore) || 0;
     document.getElementById('event-notify-days').value = Math.floor(notifySeconds / 86400);
@@ -708,6 +735,15 @@ const App = {
       ? Math.max(1, parseInt(document.getElementById('event-recurrence-interval').value, 10) || 1)
       : 1;
 
+    // Límites de fin de serie (opcionales). Vacío → null (serie indefinida).
+    const rawEndDate = document.getElementById('event-recurrence-end-date').value;
+    const rawMaxCount = document.getElementById('event-recurrence-max-count').value;
+    const recurrenceEndDate = repeats && rawEndDate ? rawEndDate : null;
+    const parsedMaxCount = parseInt(rawMaxCount, 10);
+    const recurrenceMaxCount = repeats && Number.isFinite(parsedMaxCount) && parsedMaxCount > 0
+      ? Math.min(parsedMaxCount, 9999)
+      : null;
+
     const notifyDays = Math.max(0, parseInt(document.getElementById('event-notify-days').value, 10) || 0);
     const notifyHours = Math.max(0, parseInt(document.getElementById('event-notify-hours').value, 10) || 0);
     const notifyMinutes = Math.max(0, parseInt(document.getElementById('event-notify-minutes').value, 10) || 0);
@@ -715,6 +751,16 @@ const App = {
     const notifyBefore = notifySeconds > 0 ? notifySeconds : null;
 
     if (!name || !date) return;
+
+    // Validación de límites de recurrencia
+    if (recurrenceEndDate && recurrenceEndDate < date) {
+      alert('La fecha de fin de la repetición no puede ser anterior a la fecha del evento.');
+      return;
+    }
+    if (rawMaxCount !== '' && recurrenceMaxCount === null && repeats) {
+      alert('El número máximo de repeticiones debe ser un número entero mayor que 0.');
+      return;
+    }
 
     const existing = this.currentEditId ? Storage.getById(this.currentEditId) : null;
 
@@ -742,12 +788,21 @@ const App = {
       category,
       recurrenceUnit,
       recurrenceInterval,
+      recurrenceEndDate,
+      recurrenceMaxCount,
       notifyBefore,
       _celebrated: existing ? existing._celebrated : false,
       _notifiedKey: targetChanged ? null : (existing ? existing._notifiedKey : null),
     };
 
     Storage.upsert(event);
+
+    // Si el evento estaba archivado (p. ej. una serie que llegó a su límite)
+    // y al editarlo vuelve a tener ocurrencias por delante, se reactiva.
+    if (existing && existing.archivedAt && !Countdown.hasElapsed(event)) {
+      Storage.unarchive(event.id);
+    }
+
     this.renderAll();
     UI.showView('view-main', 'left');
   },
@@ -766,7 +821,14 @@ const App = {
   /** Muestra u oculta el bloque de cantidad+unidad de repetición */
   toggleRepeatRow(show) {
     document.getElementById('repeat-row').hidden = !show;
+    document.getElementById('repeat-limit-row').hidden = !show;
     document.getElementById('repeat-hint').hidden = !show;
+
+    // Al desactivar "Repetir", los límites dejan de tener sentido
+    if (!show) {
+      document.getElementById('event-recurrence-end-date').value = '';
+      document.getElementById('event-recurrence-max-count').value = '';
+    }
   },
 
   /**
@@ -807,7 +869,16 @@ const App = {
       return;
     }
 
-    const tempEvent = { date, time, recurrenceUnit, recurrenceInterval };
+    const rawEndDate = document.getElementById('event-recurrence-end-date')?.value || '';
+    const parsedMax = parseInt(document.getElementById('event-recurrence-max-count')?.value, 10);
+    const tempEvent = {
+      date,
+      time,
+      recurrenceUnit,
+      recurrenceInterval,
+      recurrenceEndDate: repeats && rawEndDate ? rawEndDate : null,
+      recurrenceMaxCount: repeats && Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : null,
+    };
     document.getElementById('preview-date').textContent = Countdown.formatDate(tempEvent);
 
     if (Countdown.hasElapsed(tempEvent)) {
@@ -1023,7 +1094,7 @@ const App = {
   /** Genera el JSON de exportación (solo eventos activos, sin flags internos) */
   _buildExportJson() {
     const events = Storage.getActive().map((e) => {
-      const { unit, interval } = Countdown.getRecurrence(e);
+      const { unit, interval, endDate, maxCount } = Countdown.getRecurrence(e);
       return {
         id: e.id,
         name: e.name,
@@ -1034,6 +1105,8 @@ const App = {
         category: e.category || 'other',
         recurrenceUnit: unit,
         recurrenceInterval: interval,
+        recurrenceEndDate: endDate,
+        recurrenceMaxCount: maxCount,
         notifyBefore: e.notifyBefore || null,
       };
     });
@@ -1176,6 +1249,11 @@ const App = {
         category: raw.category || 'other',
         recurrenceUnit: VALID_UNITS.includes(raw.recurrenceUnit) ? raw.recurrenceUnit : 'none',
         recurrenceInterval: Math.max(1, Number(raw.recurrenceInterval) || 1),
+        // Ausentes en backups anteriores a la feature 002 → serie indefinida
+        recurrenceEndDate: raw.recurrenceEndDate || null,
+        recurrenceMaxCount: Number(raw.recurrenceMaxCount) > 0
+          ? Math.min(Math.floor(Number(raw.recurrenceMaxCount)), 9999)
+          : null,
         notifyBefore: raw.notifyBefore || null,
         _celebrated: false,
         _notifiedKey: null,

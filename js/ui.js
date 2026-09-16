@@ -48,21 +48,38 @@ function getCategoryById(id) {
  * @param {{unit: 'none'|'day'|'week'|'month'|'year', interval: number}} recurrence
  */
 function recurrenceLabel(recurrence) {
-  const { unit, interval } = recurrence;
+  const { unit, interval, endDate, maxCount } = recurrence;
   if (!unit || unit === 'none') return '';
 
+  let label;
   if (interval === 1) {
     switch (unit) {
-      case 'day': return 'Diario';
-      case 'week': return 'Semanal';
-      case 'month': return 'Mensual';
-      case 'year': return 'Anual';
+      case 'day': label = 'Diario'; break;
+      case 'week': label = 'Semanal'; break;
+      case 'month': label = 'Mensual'; break;
+      case 'year': label = 'Anual'; break;
       default: return '';
     }
+  } else {
+    const UNIT_PLURAL = { day: 'días', week: 'semanas', month: 'meses', year: 'años' };
+    label = `Cada ${interval} ${UNIT_PLURAL[unit] || ''}`;
   }
 
-  const UNIT_PLURAL = { day: 'días', week: 'semanas', month: 'meses', year: 'años' };
-  return `Cada ${interval} ${UNIT_PLURAL[unit] || ''}`;
+  // Sufijos de límite de serie (feature 002). Sin límites, el label no cambia.
+  if (maxCount) label += ` · ${maxCount} rep${maxCount !== 1 ? 's' : ''}`;
+  if (endDate) label += ` · hasta ${formatShortDate(endDate)}`;
+
+  return label;
+}
+
+/**
+ * Formatea 'YYYY-MM-DD' como "30 nov" para los sufijos de límite.
+ * @param {string} isoDate
+ */
+function formatShortDate(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
 }
 
 const UI = {

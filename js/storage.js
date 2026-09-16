@@ -174,7 +174,7 @@ function generateId() {
  * @returns {string}
  */
 function encodeEventForShare(event) {
-  const { unit, interval } = Countdown.getRecurrence(event);
+  const { unit, interval, endDate, maxCount } = Countdown.getRecurrence(event);
   const payload = {
     name: event.name,
     date: event.date,
@@ -184,6 +184,8 @@ function encodeEventForShare(event) {
     category: event.category,
     recurrenceUnit: unit,
     recurrenceInterval: interval,
+    recurrenceEndDate: endDate,
+    recurrenceMaxCount: maxCount,
   };
   const json = JSON.stringify(payload);
   const base64 = btoa(unescape(encodeURIComponent(json)));
@@ -205,7 +207,7 @@ function decodeSharedEvent(encoded) {
     const VALID_UNITS = ['none', 'day', 'week', 'month', 'year'];
     // Soporta el código compartido más reciente (recurrenceUnit/Interval) y,
     // por compatibilidad, enlaces antiguos generados con 'recurrence' o 'recurring'.
-    const { unit, interval } = Countdown.getRecurrence(data);
+    const { unit, interval, endDate, maxCount } = Countdown.getRecurrence(data);
 
     return {
       name: String(data.name).slice(0, 40),
@@ -216,6 +218,9 @@ function decodeSharedEvent(encoded) {
       category: data.category || 'other',
       recurrenceUnit: VALID_UNITS.includes(unit) ? unit : 'none',
       recurrenceInterval: Math.max(1, interval || 1),
+      // Ausentes en enlaces anteriores a la feature 002 → serie indefinida
+      recurrenceEndDate: endDate,
+      recurrenceMaxCount: maxCount,
     };
   } catch (e) {
     return null;
