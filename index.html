@@ -43,6 +43,7 @@
         <button class="icon-btn back-btn icon-only" data-target="view-main" aria-label="Volver" data-icon="arrowLeft"></button>
         <h1 class="logo">Mis eventos</h1>
         <div class="topbar-actions">
+          <button id="btn-open-push-settings" class="icon-btn" aria-label="Notificaciones push" data-icon="bell"></button>
           <button id="btn-open-archived" class="icon-btn" aria-label="Eventos archivados" data-icon="archive"></button>
           <button id="btn-open-export" class="icon-btn" aria-label="Exportar eventos" data-icon="upload"></button>
           <button id="btn-open-import" class="icon-btn" aria-label="Importar eventos" data-icon="download"></button>
@@ -163,7 +164,7 @@
                 <span>min</span>
               </div>
             </div>
-            <p class="form-hint" id="notify-hint">Déjalo a 0 para no avisar. Necesitas tener la app abierta (o en segundo plano reciente) para recibir el aviso.</p>
+            <p class="form-hint" id="notify-hint">Déjalo a 0 para no avisar. Si activas las notificaciones push (🔔 en la lista de eventos), el aviso te llega aunque la app esté cerrada; si no, necesitas tenerla abierta.</p>
           </div>
 
         </div>
@@ -216,6 +217,19 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- ===================== PUSH SETTINGS MODAL ===================== -->
+  <div id="modal-push-settings" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Notificaciones push</h2>
+      <p id="push-settings-status" class="modal-hint"></p>
+      <p id="push-settings-explainer" class="modal-hint"></p>
+      <div class="modal-actions modal-actions-col">
+        <button id="btn-push-toggle" class="btn-primary">Activar notificaciones push</button>
+        <button id="btn-push-close" class="btn-secondary">Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <!-- ===================== EXPORT MODAL ===================== -->
@@ -309,6 +323,7 @@
   <script src="js/storage.js"></script>
   <script src="js/countdown.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/push.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
