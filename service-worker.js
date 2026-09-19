@@ -2,7 +2,7 @@
    Next Appointment — Service Worker
    ========================================= */
 
-const CACHE_NAME = 'next-appointment-v15';
+const CACHE_NAME = 'next-appointment-v16';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
   './js/storage.js',
   './js/countdown.js',
   './js/ui.js',
+  './js/push.js',
   './js/app.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -86,7 +87,32 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Notificaciones push (preparado para uso futuro)
+// Notificaciones push reales (feature 005): el Cloudflare Worker envía el
+// aviso y este listener lo muestra, aunque la app esté completamente cerrada.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    // Payload no-JSON (ej. una prueba manual): lo usamos como cuerpo.
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'Next Appointment';
+  const options = {
+    body: data.body || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    // Un aviso por evento: si llega otro del mismo evento, lo reemplaza
+    // en vez de acumular notificaciones repetidas.
+    tag: data.tag || data.eventId || 'next-appointment',
+    data: { eventId: data.eventId || null },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Al tocar la notificación: abrir la app (o enfocarla si ya estaba abierta)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
