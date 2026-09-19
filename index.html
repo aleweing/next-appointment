@@ -146,6 +146,16 @@
               </select>
             </div>
             <p class="form-hint" id="repeat-hint" hidden>Ej: cada 2 semanas, cada 3 días, cada 1 año (cumpleaños, aniversarios...).</p>
+            <div class="form-row" id="repeat-limit-row" hidden>
+              <div class="form-group">
+                <label for="event-recurrence-end-date">Repetir hasta (opcional)</label>
+                <input type="date" id="event-recurrence-end-date" />
+              </div>
+              <div class="form-group">
+                <label for="event-recurrence-max-count">Nº máx. de veces (opcional)</label>
+                <input type="number" id="event-recurrence-max-count" min="1" max="9999" inputmode="numeric" placeholder="Sin límite" />
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
