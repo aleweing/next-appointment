@@ -39,9 +39,9 @@ const PUSH_ENABLED_KEY = 'next-appointment:push-enabled';
 const Push = {
   /** ¿Están rellenados los tres valores de configuración de arriba? */
   isConfigured() {
-    return !PUSH_WORKER_URL.includes('TU-SUBDOMINIO')
-      && !PUSH_APP_TOKEN.startsWith('PEGA-AQUI')
-      && !VAPID_PUBLIC_KEY.startsWith('PEGA-AQUI');
+    return !PUSH_WORKER_URL.includes('alewein')
+      && !PUSH_APP_TOKEN.startsWith('PPFK3gaeJ6W8eCyzhgx+0lF0uXd5LUACc60EXlV+r5vA=')
+      && !VAPID_PUBLIC_KEY.startsWith('BLciEqyQZCuMhFLJwwG1GR4Y8dTajxPvFniTob7XT05ZRwG7N_aVyqNg60oo8HSpxU8KmlendPPeutCxGn8iugE');
   },
 
   /** ¿Este navegador soporta push del sistema? */
