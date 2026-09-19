@@ -1,5 +1,13 @@
 /* =========================================
    Next Appointment — Countdown logic
+   =========================================
+
+   ⚠️ SINCRONIZACIÓN CON EL WORKER DE PUSH (feature 005)
+   Las funciones getRecurrence / advanceByRecurrence / getLastOccurrence /
+   isRecurrenceFinished están DUPLICADAS en el Worker
+   `next-appointment-push` (sección 3 de su worker.js), que las necesita para
+   reprogramar avisos sin el cliente. Si cambiás el algoritmo de recurrencia
+   acá, hay que replicar el cambio allá (y al revés).
    ========================================= */
 
 const Countdown = {

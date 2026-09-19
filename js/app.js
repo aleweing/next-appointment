@@ -141,6 +141,14 @@ const App = {
       if (e.target.id === 'modal-import-json') UI.hideModal('modal-import-json');
     });
 
+    // Notificaciones push (feature 005)
+    document.getElementById('btn-open-push-settings').addEventListener('click', () => this.openPushSettings());
+    document.getElementById('btn-push-close').addEventListener('click', () => UI.hideModal('modal-push-settings'));
+    document.getElementById('btn-push-toggle').addEventListener('click', () => this.togglePush());
+    document.getElementById('modal-push-settings').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-push-settings') UI.hideModal('modal-push-settings');
+    });
+
     // Archivados
     document.getElementById('btn-open-archived').addEventListener('click', () => {
       this.renderArchivedView();
@@ -189,6 +197,11 @@ const App = {
 
     // Service worker
     this.registerServiceWorker();
+
+    // Push: sincroniza el estado real de la suscripción y reprograma los
+    // avisos pendientes en el Worker (TASK-005-014). Asíncrono y aislado:
+    // si algo falla, la app sigue funcionando igual que siempre.
+    Push.init(Storage.getActive()).catch((e) => console.warn('[push] init', e));
 
     // Check if URL has a shared event to import
     this.checkForSharedEvent();
@@ -333,6 +346,10 @@ const App = {
   checkNotifications(events) {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
+    // Si este dispositivo tiene push activo, el aviso lo entrega el sistema
+    // operativo desde el Worker: no hay que dispararlo también aquí
+    // (TASK-005-013). Sin push, el comportamiento es el de siempre (FR-010).
+    if (typeof Push !== 'undefined' && Push.isEnabled()) return;
 
     events.forEach((event) => {
       if (!event.notifyBefore) return;
@@ -803,6 +820,14 @@ const App = {
       Storage.unarchive(event.id);
     }
 
+    // Push: programar el aviso nuevo o cancelar el que hubiera (FR-006).
+    // Sin await a propósito: guardar el evento no debe esperar a la red.
+    if (notifyBefore) {
+      Push.scheduleEventNotification(event).catch(() => {});
+    } else {
+      Push.cancelEventNotification(event.id).catch(() => {});
+    }
+
     this.renderAll();
     UI.showView('view-main', 'left');
   },
@@ -812,10 +837,104 @@ const App = {
     if (!this.currentEditId) return;
     if (!confirm('¿Eliminar este evento?')) return;
 
+    // Push: cancelar el aviso pendiente antes de perder el id (FR-006).
+    Push.cancelEventNotification(this.currentEditId).catch(() => {});
+
     Storage.remove(this.currentEditId);
     this.currentEditId = null;
     this.renderAll();
     UI.showView('view-main', 'left');
+  },
+
+  // ─── NOTIFICACIONES PUSH (feature 005) ───────────────────────────────────
+
+  /** Abre el modal de ajustes de push y pinta su estado actual */
+  openPushSettings() {
+    this.renderPushSettings();
+    UI.showModal('modal-push-settings');
+  },
+
+  /**
+   * Pinta el estado del modal de push según el entorno:
+   * - navegador sin soporte → se explica y no se ofrece activar
+   * - app sin configurar (constantes de js/push.js sin rellenar) → se avisa
+   * - Safari sin instalar en pantalla de inicio → instrucciones (FR-002)
+   * - resto → botón para activar o desactivar
+   */
+  renderPushSettings() {
+    const statusEl = document.getElementById('push-settings-status');
+    const explainerEl = document.getElementById('push-settings-explainer');
+    const toggleBtn = document.getElementById('btn-push-toggle');
+
+    toggleBtn.classList.remove('hidden');
+    toggleBtn.disabled = false;
+
+    if (!Push.isSupported()) {
+      statusEl.textContent = 'Este navegador no soporta notificaciones push.';
+      explainerEl.textContent = 'Los avisos seguirán funcionando mientras tengas la app abierta.';
+      toggleBtn.classList.add('hidden');
+      return;
+    }
+
+    if (!Push.isConfigured()) {
+      statusEl.textContent = 'Las notificaciones push todavía no están configuradas en esta instalación.';
+      explainerEl.textContent = 'Falta rellenar la URL del Worker, el token y la clave VAPID en js/push.js.';
+      toggleBtn.classList.add('hidden');
+      return;
+    }
+
+    if (!Push.isInstalledStandalone()) {
+      statusEl.textContent = 'Para recibir avisos con la app cerrada, primero añade Next Appointment a tu pantalla de inicio.';
+      explainerEl.textContent = 'En iPhone: botón Compartir → "Añadir a pantalla de inicio". Luego abre la app desde ese icono y vuelve aquí. Es una limitación de iOS, no de la app.';
+      toggleBtn.classList.add('hidden');
+      return;
+    }
+
+    if (Push.isEnabled()) {
+      statusEl.textContent = '✅ Notificaciones push activadas en este dispositivo.';
+      explainerEl.textContent = 'Los avisos que configures en cada evento te llegarán aunque la app esté cerrada.';
+      toggleBtn.textContent = 'Desactivar en este dispositivo';
+    } else {
+      statusEl.textContent = '🔕 Notificaciones push desactivadas en este dispositivo.';
+      explainerEl.textContent = 'Si las activas, los avisos llegarán aunque la app esté cerrada. Cada dispositivo se activa por separado.';
+      toggleBtn.textContent = 'Activar notificaciones push';
+    }
+  },
+
+  /** Activa o desactiva push en este dispositivo desde el modal */
+  async togglePush() {
+    const toggleBtn = document.getElementById('btn-push-toggle');
+    toggleBtn.disabled = true;
+
+    if (Push.isEnabled()) {
+      toggleBtn.textContent = 'Desactivando…';
+      await Push.unsubscribeFromPush();
+      this.renderPushSettings();
+      return;
+    }
+
+    toggleBtn.textContent = 'Activando…';
+    const result = await Push.subscribeToPush();
+
+    if (result.ok) {
+      // Programa de una vez los avisos de los eventos que ya existían.
+      await Push.resyncAll(Storage.getActive());
+      this.renderPushSettings();
+      document.getElementById('push-settings-explainer').textContent =
+        'Listo. Tus eventos con aviso ya están programados en este dispositivo.';
+      return;
+    }
+
+    this.renderPushSettings();
+    const messages = {
+      denied: 'No diste permiso de notificaciones. Puedes cambiarlo en Ajustes → Notificaciones → Next Appointment.',
+      'not-standalone': 'Añade la app a tu pantalla de inicio y ábrela desde ahí para poder activar el push.',
+      'not-configured': 'Faltan los datos del Worker en js/push.js.',
+      'worker-error': 'No se pudo registrar el dispositivo en el servidor de avisos. Inténtalo de nuevo más tarde.',
+      unsupported: 'Este navegador no soporta notificaciones push.',
+    };
+    document.getElementById('push-settings-explainer').textContent =
+      messages[result.reason] || 'No se pudo activar el push. Inténtalo de nuevo.';
   },
 
   /** Muestra u oculta el bloque de cantidad+unidad de repetición */
