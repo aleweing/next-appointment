@@ -1164,6 +1164,8 @@ const App = {
       category: this.pendingImport.category || DEFAULT_CATEGORY_ID,
       recurrenceUnit: this.pendingImport.recurrenceUnit || 'none',
       recurrenceInterval: this.pendingImport.recurrenceInterval || 1,
+      recurrenceEndDate: this.pendingImport.recurrenceEndDate || null,
+      recurrenceMaxCount: this.pendingImport.recurrenceMaxCount || null,
       notifyBefore: null,
       _celebrated: false,
       _notifiedKey: null,
