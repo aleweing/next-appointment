@@ -39,15 +39,17 @@ const PUSH_ENABLED_KEY = 'next-appointment:push-enabled';
 const Push = {
   /**
    * ¿Están rellenados los tres valores de configuración de arriba?
-   * Compara contra los placeholders ORIGINALES (no contra fragmentos de los
-   * valores reales), para que esta comprobación no se pueda romper de nuevo
-   * por un reemplazo accidental al pegar las claves reales.
+   * A propósito, esta función no contiene ningún valor real (URL, token o
+   * clave) — solo las marcas fijas del placeholder original. Así, por más
+   * que se edite el archivo cerca de acá, no hay ningún valor real con el
+   * que una comparación pueda chocar consigo misma por accidente.
    */
   isConfigured() {
-    return Boolean(PUSH_WORKER_URL) && Boolean(PUSH_APP_TOKEN) && Boolean(VAPID_PUBLIC_KEY)
-      && PUSH_WORKER_URL !== 'https://next-appointment-push.alewein.workers.dev'
-      && PUSH_APP_TOKEN !== 'PFK3gaeJ6W8eCyzhgx+0lF0uXd5LUACc60EXlV+r5vA='
-      && VAPID_PUBLIC_KEY !== 'BLciEqyQZCuMhFLJwwG1GR4Y8dTajxPvFniTob7XT05ZRwG7N_aVyqNg60oo8HSpxU8KmlendPPeutCxGn8iugE';
+    const looksLikePlaceholder = (value) =>
+      !value || value.includes('TU-SUBDOMINIO') || value.startsWith('PEGA-AQUI');
+    return !looksLikePlaceholder(PUSH_WORKER_URL)
+      && !looksLikePlaceholder(PUSH_APP_TOKEN)
+      && !looksLikePlaceholder(VAPID_PUBLIC_KEY);
   },
 
   /** ¿Este navegador soporta push del sistema? */
