@@ -1014,11 +1014,13 @@ const App = {
     const event = Storage.getById(id);
     if (!event) return;
 
+    // El enlace abre una página pública (cuenta.html) con la cuenta atrás en
+    // vivo y un botón para añadirla, en vez de ir directo al modal de importar.
     const encoded = encodeEventForShare(event);
-    const url = new URL(window.location.href);
+    const url = new URL('cuenta.html', window.location.href);
     url.search = '';
     url.hash = '';
-    url.searchParams.set('import', encoded);
+    url.searchParams.set('e', encoded);
 
     this.pendingShareUrl = url.toString();
 
@@ -1083,14 +1085,15 @@ const App = {
     // ¿Es una URL? intentamos extraer el parámetro "import"
     try {
       const url = new URL(trimmed);
-      const fromUrl = url.searchParams.get('import');
+      // ?import= (enlaces antiguos a la app) o ?e= (página pública cuenta.html)
+      const fromUrl = url.searchParams.get('import') || url.searchParams.get('e');
       if (fromUrl) return fromUrl;
     } catch (e) {
       // No es una URL válida, seguimos asumiendo que es el código directo
     }
 
     // Si parece contener "import=" sin ser una URL completa (ej. pegaron solo la query)
-    const match = trimmed.match(/import=([^&\s]+)/);
+    const match = trimmed.match(/import=([^&\s]+)/) || trimmed.match(/(?:^|[?&])e=([^&\s]+)/);
     if (match) return decodeURIComponent(match[1]);
 
     // Asumimos que el texto pegado es directamente el código
