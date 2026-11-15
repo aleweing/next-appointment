@@ -233,6 +233,40 @@ final class CountdownTests: XCTestCase {
         XCTAssertFalse(Countdown.isRecurrenceFinished(e, now: at(2027, 1, 1), calendar: calendar))
     }
 
+    // MARK: - Avisos
+
+    func testMomentoDelAviso() {
+        var unico = event("2026-12-25", "08:00")
+        XCTAssertNil(Countdown.nextNotificationDate(for: unico, now: at(2026, 11, 15), calendar: calendar), "sin aviso")
+        unico.notifyBefore = 3_600
+        XCTAssertEqual(
+            Countdown.nextNotificationDate(for: unico, now: at(2026, 11, 15), calendar: calendar),
+            at(2026, 12, 25, 7, 0)
+        )
+        XCTAssertNil(
+            Countdown.nextNotificationDate(for: unico, now: at(2026, 12, 25, 7, 30), calendar: calendar),
+            "el momento del aviso ya pasó"
+        )
+        XCTAssertNil(Countdown.nextNotificationDate(for: unico, now: at(2026, 12, 26), calendar: calendar))
+    }
+
+    func testAvisoDeUnaSerieSaltaALaSiguienteOcurrencia() {
+        var semanal = event("2026-11-02", "18:00", unit: .week)
+        semanal.notifyBefore = 86_400 // un día antes
+        XCTAssertEqual(
+            Countdown.nextNotificationDate(for: semanal, now: at(2026, 11, 12), calendar: calendar),
+            at(2026, 11, 15, 18, 0)
+        )
+        // A menos de un día del lunes 16, el aviso de esa ocurrencia ya pasó: toca el del 23.
+        XCTAssertEqual(
+            Countdown.nextNotificationDate(for: semanal, now: at(2026, 11, 16, 9, 0), calendar: calendar),
+            at(2026, 11, 22, 18, 0)
+        )
+        // Si esa era la última ocurrencia, no queda ningún aviso.
+        semanal.recurrenceEndDate = "2026-11-16"
+        XCTAssertNil(Countdown.nextNotificationDate(for: semanal, now: at(2026, 11, 16, 9, 0), calendar: calendar))
+    }
+
     // MARK: - Textos
 
     func testDesglose() {
