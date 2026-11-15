@@ -22,6 +22,7 @@ Service Worker (network-first para JS/CSS/HTML) → uso offline
 ```
 next-appointment/
 ├── index.html              # 5 vistas: main, lista, formulario, celebración, archivados
+├── cuenta.html             # Página pública de un evento compartido (?e=base64)
 ├── manifest.json
 ├── service-worker.js       # Cache v13, network-first para assets de código
 ├── css/
@@ -81,8 +82,13 @@ next-appointment/
 ```
 
 ### Compartir evento individual
-- Link con evento codificado en base64 (`?import=...`)
-- Si la otra persona tiene la PWA instalada en iOS, puede pegar el enlace en "Importar"
+- El botón compartir genera un enlace a la **página pública** `cuenta.html?e=<base64>`:
+  - Muestra la cuenta atrás en vivo (con el color y emoji del evento) a cualquiera, tenga o no la app.
+  - Botón "Añadir a mis cuentas atrás" → abre la app con `?import=` (flujo de importación existente).
+  - Botón "Crear la mía" y pie "Hecho con Next Appointment": cada evento compartido sirve para conseguir usuarios nuevos.
+  - La vista previa al compartir (WhatsApp, iMessage…) es genérica: GitHub Pages no puede generar una por evento.
+- Los enlaces antiguos `?import=...` siguen funcionando.
+- Si la otra persona tiene la PWA instalada en iOS, puede pegar cualquiera de los dos enlaces en "Importar"
 
 ### Onboarding
 - Primera apertura: evento de ejemplo con botón "Crear mi propio evento"

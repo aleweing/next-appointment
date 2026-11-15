@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6c5ce7" />
+  <title>Cuenta atrás compartida ⏳ · Next Appointment</title>
+  <meta name="description" content="Alguien te ha compartido una cuenta atrás. Mírala en vivo y añádela a tu lista, gratis y sin registro." />
+
+  <!-- Vista previa al compartir (WhatsApp, Telegram, iMessage…).
+       Es estática porque GitHub Pages no puede generar una por evento. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Next Appointment" />
+  <meta property="og:title" content="Te han compartido una cuenta atrás ⏳" />
+  <meta property="og:description" content="Ábrela para verla en vivo y añadirla a tu lista. Gratis, sin registro." />
+  <meta property="og:image" content="https://aleweing.github.io/next-appointment/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root {
+      --accent: #6c5ce7;
+      --bg: #f5f6fa;
+      --bg-card: #ffffff;
+      --text: #1e1e2e;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --bg-card: #1a1d29;
+        --text: #f5f6fa;
+        --text-muted: #9ca3af;
+        --border: #2a2d3a;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { touch-action: manipulation; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    main { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+    .brand { text-align: center; font-weight: 700; font-size: 15px; color: var(--text-muted); text-decoration: none; }
+    .card {
+      background: var(--bg-card);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      border-top: 6px solid var(--accent);
+      padding: 32px 20px 28px;
+      text-align: center;
+    }
+    .intro { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+    .emoji { font-size: 64px; line-height: 1; margin-bottom: 12px; }
+    .name { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; overflow-wrap: anywhere; }
+    .date { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+    .recurrence { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--accent);
+                  border: 1px solid var(--accent); border-radius: 99px; padding: 3px 10px; }
+    .countdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 24px; }
+    .unit { background: var(--bg); border-radius: 14px; padding: 12px 4px; }
+    .unit-value { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+    .unit-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-top: 2px; }
+    .arrived { margin-top: 24px; font-size: 24px; font-weight: 800; color: var(--accent); }
+    .btn {
+      display: block; width: 100%; text-align: center; text-decoration: none; cursor: pointer;
+      font: inherit; font-size: 16px; font-weight: 700; border-radius: 14px; padding: 15px; border: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+    .hint { font-size: 12px; color: var(--text-muted); text-align: center; line-height: 1.5; }
+    .hint button { background: none; border: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
+    footer { margin-top: auto; padding-top: 24px; text-align: center; font-size: 12px; color: var(--text-muted); }
+    footer a { color: inherit; font-weight: 700; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="brand" href="./">⏳ Next Appointment</a>
+
+    <!-- Evento compartido -->
+    <section id="shared" class="hidden">
+      <div class="card">
+        <p class="intro">Te han compartido esta cuenta atrás</p>
+        <div id="emoji" class="emoji"></div>
+        <h1 id="name" class="name"></h1>
+        <p id="date" class="date"></p>
+        <span id="recurrence" class="recurrence hidden"></span>
+
+        <div id="countdown" class="countdown" aria-live="off">
+          <div class="unit"><div id="cd-days" class="unit-value">0</div><div class="unit-label">días</div></div>
+          <div class="unit"><div id="cd-hours" class="unit-value">00</div><div class="unit-label">horas</div></div>
+          <div class="unit"><div id="cd-minutes" class="unit-value">00</div><div class="unit-label">min</div></div>
+          <div class="unit"><div id="cd-seconds" class="unit-value">00</div><div class="unit-label">seg</div></div>
+        </div>
+        <p id="arrived" class="arrived hidden">¡Ya llegó! 🎉</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+        <a id="btn-add" class="btn btn-primary" href="./">Añadir a mis cuentas atrás</a>
+        <a class="btn btn-secondary" href="./">Crear la mía</a>
+      </div>
+      <p class="hint" style="margin-top:12px;">
+        ¿Tienes la app instalada en el iPhone?
+        <button id="btn-copy" type="button">Copia este enlace</button>
+        y pégalo en «Importar» dentro de la app.
+      </p>
+    </section>
+
+    <!-- Enlace roto o incompleto -->
+    <section id="invalid" class="hidden">
+      <div class="card">
+        <div class="emoji">🤔</div>
+        <h1 class="name">Este enlace no funciona</h1>
+        <p class="date">Puede que se haya cortado al copiarlo. Pide que te lo vuelvan a enviar.</p>
+      </div>
+      <a class="btn btn-primary" href="./" style="margin-top:16px;">Crear mi propia cuenta atrás</a>
+    </section>
+
+    <footer>
+      Hecho con <a href="./">Next Appointment</a> · cuentas atrás gratis, sin registro y sin anuncios
+    </footer>
+  </main>
+
+  <script src="js/countdown.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('e') || params.get('import');
+      const event = encoded ? decodeSharedEvent(encoded) : null;
+
+      if (!event) {
+        document.getElementById('invalid').classList.remove('hidden');
+        return;
+      }
+
+      if (/^#[0-9a-f]{3,8}$/i.test(event.color)) {
+        document.documentElement.style.setProperty('--accent', event.color);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', event.color);
+      }
+
+      document.title = `${event.emoji} ${event.name} · cuenta atrás`;
+      document.getElementById('emoji').textContent = event.emoji;
+      document.getElementById('name').textContent = event.name;
+      document.getElementById('date').textContent = Countdown.formatDate(event);
+
+      const { unit, interval } = Countdown.getRecurrence(event);
+      if (unit !== 'none') {
+        const names = {
+          day: ['Cada día', 'días'], week: ['Cada semana', 'semanas'],
+          month: ['Cada mes', 'meses'], year: ['Cada año', 'años'],
+        };
+        const [one, many] = names[unit] || ['', ''];
+        const el = document.getElementById('recurrence');
+        el.textContent = '🔁 ' + (interval > 1 ? `Cada ${interval} ${many}` : one);
+        el.classList.remove('hidden');
+      }
+
+      // La app principal ya sabe importar con ?import=
+      document.getElementById('btn-add').href = './?import=' + encodeURIComponent(encoded);
+
+      document.getElementById('btn-copy').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const done = () => { btn.textContent = '¡Copiado!'; setTimeout(() => { btn.textContent = 'Copia este enlace'; }, 1500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(window.location.href).then(done).catch(() => {});
+      });
+
+      document.getElementById('shared').classList.remove('hidden');
+
+      const els = ['days', 'hours', 'minutes', 'seconds'].map((k) => document.getElementById('cd-' + k));
+      function tick() {
+        if (Countdown.hasElapsed(event)) {
+          document.getElementById('countdown').classList.add('hidden');
+          document.getElementById('arrived').classList.remove('hidden');
+          return false;
+        }
+        const { days, hours, minutes, seconds } = Countdown.breakdown(Countdown.diffMs(event));
+        els[0].textContent = days;
+        els[1].textContent = pad(hours);
+        els[2].textContent = pad(minutes);
+        els[3].textContent = pad(seconds);
+        return true;
+      }
+      if (tick()) {
+        const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 1000);
+      }
+    })();
+  </script>
+</body>
+</html>
