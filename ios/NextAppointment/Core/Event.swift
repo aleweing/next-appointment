@@ -35,6 +35,8 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
     var notifyBefore: Int?
     /// Marca de archivado en milisegundos (como en la web), o `nil`.
     var archivedAt: Double?
+    /// Si ya se mostró la celebración de este evento (`_celebrated` en la web).
+    var celebrated: Bool
 
     static let maxNameLength = 40
 
@@ -51,7 +53,8 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
         recurrenceEndDate: String? = nil,
         recurrenceMaxCount: Int? = nil,
         notifyBefore: Int? = nil,
-        archivedAt: Double? = nil
+        archivedAt: Double? = nil,
+        celebrated: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -66,6 +69,7 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
         self.recurrenceMaxCount = recurrenceMaxCount
         self.notifyBefore = notifyBefore
         self.archivedAt = archivedAt
+        self.celebrated = celebrated
     }
 
     /// Recurrencia normalizada: intervalo mínimo 1 y límites vacíos como `nil`.
@@ -94,6 +98,7 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
         case id, name, date, time, emoji, color, category
         case recurrenceUnit, recurrenceInterval, recurrenceEndDate, recurrenceMaxCount
         case notifyBefore, archivedAt
+        case celebrated = "_celebrated"
         // Formatos antiguos de la web, solo para leer.
         case recurrence, recurring
     }
@@ -130,6 +135,7 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
         recurrenceMaxCount = Event.lenientInt(c, .recurrenceMaxCount).flatMap { $0 > 0 ? $0 : nil }
         notifyBefore = Event.lenientInt(c, .notifyBefore).flatMap { $0 > 0 ? $0 : nil }
         archivedAt = (try? c.decodeIfPresent(Double.self, forKey: .archivedAt)) ?? nil
+        celebrated = (try? c.decodeIfPresent(Bool.self, forKey: .celebrated)) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -148,6 +154,7 @@ nonisolated struct Event: Codable, Identifiable, Equatable, Sendable {
         try c.encode(recurrenceMaxCount, forKey: .recurrenceMaxCount)
         try c.encode(notifyBefore, forKey: .notifyBefore)
         try c.encode(archivedAt, forKey: .archivedAt)
+        try c.encode(celebrated, forKey: .celebrated)
     }
 
     private static func nonEmpty(_ text: String??) -> String? {
