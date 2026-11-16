@@ -168,6 +168,54 @@ final class MaintenanceAndListTests: XCTestCase {
         XCTAssertEqual(EventList.categoriesInUse(events).map(\.id), ["birthday", "travel", "other"])
     }
 
+    // MARK: - Widget
+
+    func testProximosEventosDelWidget() {
+        let now = at(2026, 11, 15, 10, 0)
+        let events = [
+            event("lejos", "2027-06-01"),
+            event("pasado", "2026-11-01"),
+            event("archivado", "2026-12-01", archivedAt: ms(at(2026, 11, 1))),
+            event("cerca", "2026-11-20"),
+            event("cumple", "1990-12-01", unit: .year),
+            event("medio", "2027-01-10"),
+        ]
+        XCTAssertEqual(
+            WidgetTimeline.upcoming(events, at: now, calendar: calendar).map(\.id), ["cerca", "cumple", "medio"]
+        )
+        XCTAssertEqual(WidgetTimeline.upcoming(events, at: now, limit: 1, calendar: calendar).map(\.id), ["cerca"])
+        XCTAssertEqual(WidgetTimeline.upcoming([events[1]], at: now, calendar: calendar), [])
+    }
+
+    func testMomentosDeRefrescoDelWidget() {
+        let now = at(2026, 11, 15, 10, 0)
+        // Llega el 18 a las 08:00: quedan 2 días y 22 horas.
+        let e = event("a", "2026-11-18", "08:00")
+        XCTAssertEqual(
+            WidgetTimeline.refreshDates([e], from: now, calendar: calendar),
+            [
+                now,
+                at(2026, 11, 16, 8, 0), // pasa de 2 días a 1 día
+                at(2026, 11, 17, 8, 0), // pasa a contador en vivo
+                at(2026, 11, 18, 8, 0).addingTimeInterval(1), // ha llegado
+            ]
+        )
+        // Un evento lejano solo aporta los cambios de día dentro de la semana.
+        let lejos = event("b", "2027-06-01", "09:00")
+        let dates = WidgetTimeline.refreshDates([lejos], from: now, calendar: calendar)
+        XCTAssertEqual(dates.count, 8) // ahora + 7 cambios de día
+        XCTAssertEqual(dates.first, now)
+        XCTAssertTrue(dates.allSatisfy { $0 <= now.addingTimeInterval(7 * 86_400) })
+        XCTAssertEqual(WidgetTimeline.refreshDates([], from: now, calendar: calendar), [now])
+    }
+
+    func testTextoDeDiasDelWidget() {
+        XCTAssertEqual(WidgetTimeline.daysLabel(remaining: 12 * 86_400 + 500)?.value, "12")
+        XCTAssertEqual(WidgetTimeline.daysLabel(remaining: 12 * 86_400 + 500)?.unit, "días")
+        XCTAssertEqual(WidgetTimeline.daysLabel(remaining: 86_400)?.unit, "día")
+        XCTAssertNil(WidgetTimeline.daysLabel(remaining: 86_399), "menos de un día: contador en vivo")
+    }
+
     // MARK: - Importar el archivo de la web
 
     private let exportJSON = """

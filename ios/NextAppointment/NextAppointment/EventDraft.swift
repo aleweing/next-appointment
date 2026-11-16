@@ -85,9 +85,9 @@ struct EventDraft: Equatable {
         return Countdown.dayString(endDate, calendar: calendar) >= Countdown.dayString(when, calendar: calendar)
     }
 
-    /// Construye el evento a guardar. Al editar se conservan el id y el archivado.
-    func makeEvent(editing existing: Event? = nil, calendar: Calendar = .current) -> Event {
-        Event(
+    /// Construye el evento a guardar. Al editar se conserva el id.
+    func makeEvent(editing existing: Event? = nil, now: Date = Date(), calendar: Calendar = .current) -> Event {
+        var event = Event(
             id: existing?.id ?? Event.generateId(),
             name: trimmedName,
             date: Countdown.dayString(when, calendar: calendar),
@@ -102,5 +102,18 @@ struct EventDraft: Equatable {
             notifyBefore: notifyBefore,
             archivedAt: existing?.archivedAt
         )
+
+        let elapsed = Countdown.hasElapsed(event, now: now, calendar: calendar)
+        if let existing, existing.date == event.date, existing.time == event.time {
+            event.celebrated = existing.celebrated
+        } else {
+            // Fecha nueva: se celebrará al llegar. Si ya nace pasada, no hay nada que celebrar.
+            event.celebrated = elapsed
+        }
+        // Un evento archivado que vuelve a tener futuro se reactiva.
+        if event.archivedAt != nil, !elapsed {
+            event.archivedAt = nil
+        }
+        return event
     }
 }

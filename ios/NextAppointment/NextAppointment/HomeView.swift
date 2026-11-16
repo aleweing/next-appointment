@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Qué se está editando en la hoja del formulario: un evento nuevo o uno existente.
@@ -15,6 +16,10 @@ struct HomeView: View {
     @State private var editor: EditorTarget?
     @State private var currentId: String?
     @State private var showList = false
+    @State private var celebration: Event?
+
+    /// Un tic por segundo para comprobar si algún evento acaba de llegar.
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         let events = store.upcomingEvents()
@@ -64,7 +69,24 @@ struct HomeView: View {
             .sheet(item: $editor) { target in
                 EventFormView(event: target.event)
             }
+            .fullScreenCover(item: $celebration) { event in
+                CelebrationView(event: event)
+            }
+            .onReceive(ticker) { now in
+                checkCelebration(now: now)
+            }
         }
+    }
+
+    /// Muestra la celebración del evento que acaba de llegar. Solo desde esta
+    /// pantalla, para no interrumpir si se está en la lista o editando.
+    private func checkCelebration(now: Date) {
+        guard editor == nil, !showList, celebration == nil else { return }
+        let pending = Countdown.eventsToCelebrate(store.activeEvents, now: now)
+        guard let latest = pending.first else { return }
+        // Si llegaron varios mientras la app estaba cerrada, se celebra el más reciente.
+        store.markCelebrated(ids: pending.map(\.id))
+        celebration = latest
     }
 
     private func carousel(_ events: [Event]) -> some View {

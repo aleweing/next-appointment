@@ -28,8 +28,12 @@ struct NextAppointmentApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            // Al abrir la app se reprograman los avisos, para que las series
-            // tengan siempre el de su próxima ocurrencia.
+            // Al abrir la app: archivado automático de lo que ya pasó...
+            for id in store.runMaintenance() {
+                NotificationScheduler.cancel(id: id)
+            }
+            // ...y se reprograman los avisos, para que las series tengan
+            // siempre el de su próxima ocurrencia.
             let events = store.activeEvents
             Task { await NotificationScheduler.rescheduleAll(events) }
         }
