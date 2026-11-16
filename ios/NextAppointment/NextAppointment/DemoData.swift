@@ -11,7 +11,7 @@ enum DemoData {
         let inThreeHours = now.addingTimeInterval(3 * 3_600 + 7 * 60)
         let year = calendar.component(.year, from: now)
 
-        return [
+        var events = [
             Event(
                 id: "evt_demo_japon", name: "Viaje a Japón", date: day(47), time: "08:00",
                 emoji: "✈️", color: "#0984e3", category: "travel", notifyBefore: 86_400
@@ -41,6 +41,19 @@ enum DemoData {
                 emoji: "🎄", color: "#e17055", category: "party", recurrenceUnit: .year
             ),
         ]
+
+        // `-demo-aviso` añade un evento dentro de 4 minutos con aviso 2 minutos antes,
+        // para comprobar la notificación local sin esperar.
+        if ProcessInfo.processInfo.arguments.contains("-demo-aviso") {
+            let soon = now.addingTimeInterval(4 * 60)
+            events.append(Event(
+                id: "evt_demo_aviso", name: "Prueba de aviso",
+                date: Countdown.dayString(soon, calendar: calendar),
+                time: Countdown.timeString(soon, calendar: calendar),
+                emoji: "🎁", color: "#6c5ce7", category: "other", notifyBefore: 120
+            ))
+        }
+        return events
     }
 }
 #endif

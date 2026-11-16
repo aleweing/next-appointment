@@ -14,13 +14,16 @@ enum Theme {
     static let cardRadius: CGFloat = 24
     static let smallRadius: CGFloat = 14
 
-    /// Color de acento de un evento para texto e iconos. En tema oscuro aclara los
-    /// colores muy oscuros (como `#2d3436`) para que se lean sobre la tarjeta.
+    /// Color de acento de un evento para texto e iconos, ajustado para que se lea
+    /// sobre la tarjeta: en tema oscuro aclara los colores muy oscuros (como
+    /// `#2d3436`) y en tema claro oscurece los muy claros (como `#fdcb6e`).
     static func accent(_ hex: String) -> Color {
         let base = UIColor(hex: hex) ?? UIColor(hex: Catalog.defaultColor)!
         return Color(uiColor: UIColor { traits in
-            guard traits.userInterfaceStyle == .dark, base.luminance < 0.25 else { return base }
-            return base.mixed(with: .white, amount: 0.55)
+            if traits.userInterfaceStyle == .dark {
+                return base.luminance < 0.25 ? base.mixed(with: .white, amount: 0.55) : base
+            }
+            return base.luminance > 0.6 ? base.mixed(with: .black, amount: 0.35) : base
         })
     }
 }

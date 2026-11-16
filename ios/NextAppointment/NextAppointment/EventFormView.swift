@@ -61,10 +61,6 @@ struct EventFormView: View {
             } message: {
                 Text(alertMessage ?? "")
             }
-            .confirmationDialog("¿Eliminar este evento?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Eliminar", role: .destructive) { delete() }
-                Button("Cancelar", role: .cancel) {}
-            }
             .onAppear {
                 if existing == nil { nameFocused = true }
             }
@@ -183,7 +179,7 @@ struct EventFormView: View {
 
     private var categorySection: some View {
         Section("Categoría") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
                 ForEach(Catalog.categories) { category in
                     let selected = draft.category == category.id
                     Button {
@@ -313,10 +309,17 @@ struct EventFormView: View {
 
     private var deleteSection: some View {
         Section {
-            Button("Eliminar evento", role: .destructive) {
+            Button(role: .destructive) {
                 confirmDelete = true
+            } label: {
+                Text("Eliminar evento")
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            // El diálogo va en el propio botón para que iOS lo ancle a él.
+            .confirmationDialog("¿Eliminar este evento?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Eliminar", role: .destructive) { delete() }
+                Button("Cancelar", role: .cancel) {}
+            }
         }
         .listRowBackground(Theme.card)
     }

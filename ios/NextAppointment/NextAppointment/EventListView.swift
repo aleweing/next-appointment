@@ -30,6 +30,7 @@ struct EventListView: View {
                             } label: {
                                 Label("Eliminar", systemImage: "trash")
                             }
+                            .tint(.red) // el tinte de marca de la app taparía el rojo
                         }
                     }
                 } header: {
@@ -142,14 +143,14 @@ struct EventRowView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.muted)
             }
-
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(Countdown.shortLabel(event, now: now))
                 .font(.callout.weight(.bold))
                 .monospacedDigit()
                 .foregroundStyle(accent)
                 .multilineTextAlignment(.trailing)
+                .fixedSize()
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
