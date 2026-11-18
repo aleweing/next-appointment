@@ -141,6 +141,29 @@ struct EventFormView: View {
                     }
                 }
                 .padding(.vertical, 4)
+
+                // Cualquier otro emoji, con el teclado de emojis del sistema.
+                HStack(spacing: 12) {
+                    let isCustom = !Catalog.emojis.contains(draft.emoji)
+                    Text(isCustom ? draft.emoji : "😀")
+                        .font(.system(size: 24))
+                        .frame(width: 40, height: 40)
+                        .background(
+                            isCustom ? Theme.brand.opacity(0.18) : Theme.background,
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(isCustom ? Theme.brand : .clear, lineWidth: 2)
+                        )
+                        .opacity(isCustom ? 1 : 0.5)
+                        .accessibilityHidden(true)
+                    EmojiField(placeholder: isCustom ? "Cambiar por otro emoji…" : "Elegir otro emoji…") { emoji in
+                        draft.emoji = emoji
+                    }
+                    .frame(height: 40)
+                    .accessibilityLabel(isCustom ? "Icono \(draft.emoji). Elegir otro emoji" : "Elegir otro emoji")
+                }
             }
             .listRowBackground(Theme.card)
 
